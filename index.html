@@ -295,6 +295,13 @@ function migrate(){if((S.mig||0)>=16||!S.aliments.length)return false;S.mig=S.mi
   if(S.mig<16){for(const a of S.aliments)if(a.type==='epice')a.shop='Bio c’ Bon';S.mig=16}
   if(S.mig<17){if(!S.plats.some(x=>norm(x.name)==='poisson pane')){let a=S.aliments.find(x=>norm(x.name)==='poisson');if(!a){a={id:uid(),name:'Poisson',type:'proteine'};S.aliments.push(a)}S.plats.push({id:uid(),name:'Poisson pané',description:'',alimentIds:[a.id],cat:'',origin:'toutfait',shop:'Picard',moment:'',fav:false,members:[],qty:{}})}S.mig=17}
   if(S.mig<18){const c=S.aliments.find(x=>norm(x.name)==='concasse de tomates');if(c)c.shop='Bio c’ Bon';else S.aliments.push({id:uid(),name:'Concassé de tomates',type:'legume',shop:'Bio c’ Bon'});S.mig=18}
+  if(S.mig<19){const co=S.aliments.find(x=>/^coquill?ettes?( \(pates\))?$/.test(norm(x.name)));if(co){co.name='Coquillettes (pâtes)';co.type=co.type||'feculent'}else S.aliments.push({id:uid(),name:'Coquillettes (pâtes)',type:'feculent'});
+    const lig=S.aliments.find(x=>/^œufs?$/i.test(x.name.trim())),oe=S.aliments.find(x=>x!==lig&&/^oeufs?$/i.test(norm(x.name)));
+    if(lig&&oe){const a=lig.id,b=oe.id;oe.type=oe.type||lig.type;oe.shop=oe.shop||lig.shop;
+      for(const p of S.plats){if(p.alimentIds.includes(a)){p.alimentIds=p.alimentIds.filter(x=>x!==a);if(!p.alimentIds.includes(b))p.alimentIds.push(b)}if(p.qty&&p.qty[a]!=null){if(p.qty[b]==null)p.qty[b]=p.qty[a];delete p.qty[a]}}
+      for(const r of S.repas)for(const s in r.slots||{})if(r.slots[s]?.k==='a'&&r.slots[s].id===a)r.slots[s].id=b;
+      S.aliments=S.aliments.filter(x=>x!==lig)}
+    S.mig=19}
   return true}
 
 /* ---------- sheets & toast ---------- */
