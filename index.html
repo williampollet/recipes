@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mes plats et repas</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Repas">
+<meta name="theme-color" content="#f4b400">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: friendly kitchen notebook, short French labels, thumb-first.
+   IDEA: a fridge door planner: a bright saffron band like a magnet board, cards pinned below.
+   PICTURE: the working lists themselves (aliments by colour, plats, repas, the week).
+   COLOUR and TYPE: saffron band, warm white ground, tomato accent; five food colours; Rubik.
+   LAYOUT: one column up to 760px, bottom tab bar, sheets that slide up for every form. */
+:root{color-scheme:light dark;--bg:light-dark(#fbfaf6,#141311);--ink:light-dark(#1f1c17,#f2efe9);--mute:light-dark(#6d675c,#a8a296);--card:light-dark(#ffffff,#201e1a);--line:light-dark(#e6e0d4,#36322c);--band:light-dark(#f4b400,#2a2310);--bandink:light-dark(#1f1c17,#f6c744);--acc:light-dark(#d1351e,#ff6b55);--legume:#3d9a4a;--feculent:#c08a1c;--fruit:#ec7420;--laitage:#3f7fc4;--proteine:#c43c3c;--legumineuse:#8a5a2b;--star:#f0a800}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Rubik,system-ui,sans-serif;overflow-x:clip;padding-bottom:calc(150px + env(safe-area-inset-bottom))}
+body.lock{overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+header{background:var(--band);color:var(--bandink);padding:calc(20px + env(safe-area-inset-top)) max(5vw,16px) 18px}
+header>div{max-width:760px;margin:0 auto}
+header h1{margin:0;font-size:clamp(32px,9vw,46px);line-height:1.05;font-weight:700;text-wrap:balance}
+header p{margin:6px 0 0;font-size:15px}
+.menu{float:right;width:46px;height:46px;margin:-4px -6px 0 8px;border-radius:50%;border:0;background:color-mix(in srgb,var(--bandink) 12%,transparent);color:var(--bandink);font-size:24px;line-height:1}
+.status{font-size:13px;opacity:.85}
+main{padding:16px max(5vw,16px);max-width:792px;margin:0 auto}
+input,textarea,select{font:inherit;font-size:16px;width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);min-height:46px}
+textarea{resize:vertical}
+label{display:block;font-weight:500;margin:14px 0 0}label input,label textarea{margin-top:6px;font-weight:400}
+fieldset{border:0;padding:0;margin:16px 0 0}legend{font-weight:500;padding:0;margin-bottom:8px}
+h2{font-size:24px;line-height:1.15;margin:0 0 4px}h3{font-size:17px;margin:20px 0 8px}
+.muted{color:var(--mute);font-weight:400}
+.tools{display:grid;gap:10px;margin-bottom:6px}
+.filters,.togs,.seg{display:flex;flex-wrap:wrap;gap:8px}
+.fchip,.tog{display:inline-flex;align-items:center;gap:7px;min-height:44px;padding:0 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);font-size:15px}
+.fchip[aria-pressed=true],.tog[aria-pressed=true]{border-color:var(--c,var(--ink));background:color-mix(in srgb,var(--c,var(--ink)) 18%,var(--card));font-weight:500}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--c,var(--mute));flex:none}
+.t-legume{--c:var(--legume)}.t-feculent{--c:var(--feculent)}.t-fruit{--c:var(--fruit)}.t-laitage{--c:var(--laitage)}.t-proteine{--c:var(--proteine)}.t-legumineuse{--c:var(--legumineuse)}
+.list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.row{width:100%;text-align:left;display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-height:56px}
+.row[aria-pressed=true]{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
+.rmain{flex:1;display:flex;flex-direction:column;gap:4px}
+.rmain strong{font-weight:500}
+.desc{color:var(--mute);font-size:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:999px;background:color-mix(in srgb,var(--c,var(--mute)) 15%,transparent);font-size:13px;white-space:nowrap}
+.cat{font-size:13px;color:var(--mute);border:1px solid var(--line);border-radius:6px;padding:0 6px;white-space:nowrap}
+.pl{font-size:12px;font-weight:500;border:1.5px solid var(--mute);color:var(--mute);border-radius:6px;padding:0 5px;flex:none}
+.starbtn{flex:none;width:44px;height:44px;margin:-8px -8px -8px 0;display:grid;place-items:center;border:0;background:transparent;color:var(--mute);font-size:24px;line-height:1}
+.starbtn[aria-pressed=true]{color:var(--star)}
+.rowwrap{display:flex;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding-right:12px}
+.rowwrap .row{border:0;background:transparent}
+.group h2{font-size:18px;margin:22px 0 10px;display:flex;align-items:center;gap:8px}
+.card{width:100%;text-align:left;display:block;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px}
+.card strong{font-size:18px;font-weight:500}
+.slots{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 14px;margin-top:8px;font-size:15px}
+.slots .k{color:var(--mute)}
+.weeknav{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.weeknav>div{flex:1;text-align:center;display:flex;flex-direction:column}
+.weeknav>button{width:46px;height:46px;border-radius:50%;border:1.5px solid var(--line);background:var(--card);font-size:22px}
+.link{border:0;background:none;color:var(--acc);text-decoration:underline;padding:4px;font-size:14px}
+.day{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 12px 4px;margin-bottom:10px}
+.day.today{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
+.day h3{margin:0 0 4px;font-size:17px}.day h3::first-letter{text-transform:uppercase}
+.meal{display:flex;gap:12px;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:transparent;padding:11px 2px;min-height:52px;align-items:flex-start}
+.mlabel{width:42px;flex:none;font-weight:500;color:var(--mute)}
+.mbody{display:flex;flex-direction:column;font-size:15px}.mbody strong{font-weight:500;font-size:16px}
+.empty{background:var(--card);border:1.5px dashed var(--line);border-radius:16px;padding:20px;text-align:center}
+.empty p{margin:0 0 14px}
+.primary{background:var(--acc);color:#fff;border:0;border-radius:12px;padding:0 20px;min-height:46px;font-weight:500}
+.ghost{background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:0 16px;min-height:46px}
+.danger{background:transparent;color:var(--acc);border:1.5px solid currentColor;border-radius:12px;padding:0 14px;min-height:46px}
+.err{color:var(--acc);margin:8px 0 0;min-height:1em;font-size:15px}
+.fab{position:fixed;right:max(5vw,16px);bottom:calc(76px + env(safe-area-inset-bottom));z-index:6;background:var(--acc);color:#fff;border:0;border-radius:999px;min-height:56px;padding:0 22px;font-weight:500;font-size:17px;box-shadow:0 6px 18px rgb(0 0 0/.22)}
+.fab[hidden]{display:none}
+nav.tabs{position:fixed;inset:auto 0 0 0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:7}
+nav.tabs a{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0;color:var(--mute);text-decoration:none;font-size:13px;min-height:58px}
+nav.tabs a[aria-current=page]{color:var(--ink);font-weight:500}nav.tabs a[aria-current=page] svg{color:var(--acc)}
+nav svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.layer{position:fixed;inset:0;z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.layer[hidden]{display:none}
+.backdrop{position:absolute;inset:0;background:rgb(0 0 0/.45)}
+.sheet{position:relative;background:var(--bg);width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:20px 20px 0 0;padding:22px max(4vw,16px) 0;animation:up .22s ease-out}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+@media (prefers-reduced-motion:reduce){.sheet{animation:none}}
+@media(min-width:700px){.layer{align-items:center}.sheet{border-radius:20px}}
+.actions{position:sticky;bottom:0;background:var(--bg);display:flex;gap:8px;flex-wrap:wrap;padding:14px 0 calc(16px + env(safe-area-inset-bottom));margin-top:18px;border-top:1px solid var(--line)}
+.actions .primary{margin-left:auto}
+.slotrow{display:flex;gap:8px;margin-bottom:8px}
+.slotbtn{flex:1;display:flex;gap:12px;align-items:center;text-align:left;min-height:52px;padding:8px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--card)}
+.slotbtn .sl{width:72px;flex:none;color:var(--mute);font-weight:500}
+.x{width:52px;flex:none;border:1.5px solid var(--line);border-radius:12px;background:var(--card);font-size:22px}
+.create{margin-top:12px;padding:12px;border-radius:12px;background:var(--card);border:1.5px dashed var(--line)}.create p{margin:0 0 8px}
+.ideas{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.idea{min-height:44px;padding:0 14px;border-radius:12px;border:1.5px dashed var(--acc);background:transparent;color:var(--ink);font-size:15px}
+.idea[disabled]{border-style:solid;border-color:var(--line);color:var(--mute);cursor:default}
+.addtype{display:flex;gap:8px;margin-top:10px}.addtype input{flex:1}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(150px + env(safe-area-inset-bottom));z-index:30;background:var(--ink);color:var(--bg);border-radius:12px;padding:8px 8px 8px 16px;display:flex;gap:10px;align-items:center;max-width:calc(100vw - 32px);box-shadow:0 6px 18px rgb(0 0 0/.25)}
+#toast[hidden]{display:none}#toast button{background:transparent;border:0;color:var(--band);font-weight:700;min-height:40px;padding:0 10px}
+.ideabox{margin:14px 0 4px;padding:14px;border-radius:14px;background:color-mix(in srgb,var(--band) 16%,var(--card));border:1px solid var(--line)}
+.ideabox h3{margin:0 0 4px}
+</style>
+</head>
+<body>
+<header><div><button id="menu" class="menu" type="button" aria-label="Données et compte">⋯</button><h1 id="title">Planning</h1><p id="sub"></p><p id="status" class="status"></p></div></header>
+<main id="main"></main>
+<button class="fab" id="fab" data-add type="button">+ Ajouter</button>
+<nav class="tabs" aria-label="Pages">
+  <a href="#planning" data-r="planning"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Planning</a>
+  <a href="#repas" data-r="repas"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="6.5"/><circle cx="12" cy="13" r="3"/><path d="M3 4v6M3 7h0M21 4c-1.5 1-2 3-2 5h2v11"/></svg>Repas</a>
+  <a href="#plats" data-r="plats"><svg viewBox="0 0 24 24"><path d="M3 12h18a9 9 0 0 1-18 0Z"/><path d="M9 8c0-2 2-2 2-4M14 8c0-2 2-2 2-4"/></svg>Plats</a>
+  <a href="#aliments" data-r="aliments"><svg viewBox="0 0 24 24"><path d="M14 7 4 20l13-10Z"/><path d="M14 7c1-2 3-3 5-3-1 2-1 4-2 6M14 7c0-2 1-4 2-5"/></svg>Aliments</a>
+</nav>
+<div id="layer1" class="layer" hidden><div class="backdrop" data-close></div><div class="sheet" id="sheet1" role="dialog" aria-modal="true"></div></div>
+<div id="layer2" class="layer" hidden><div class="backdrop" data-close></div><div class="sheet" id="sheet2" role="dialog" aria-modal="true"></div></div>
+<div id="toast" role="status" hidden></div>
+<script>
+{
+const TYPES=[['legume','Légume'],['feculent','Féculent'],['fruit','Fruit'],['laitage','Laitage'],['proteine','Protéine'],['legumineuse','Légumineuse']];
+const TL=Object.fromEntries(TYPES);
+const SLOTS=[['entree','Entrée'],['plat','Plat'],['proteine','Protéine'],['laitage','Laitage'],['dessert','Dessert']];
+const SL=Object.fromEntries(SLOTS);
+const HINT={entree:['legume','fruit'],plat:['feculent','legume','proteine','legumineuse'],proteine:['proteine','legumineuse'],laitage:['laitage'],dessert:['fruit','laitage']};
+const MOM=[['midi','Midi'],['soir','Soir'],['both','Midi et soir']];const ML=Object.fromEntries(MOM);
+const ORIG=[['maison','Maison'],['toutfait','Tout fait']];const OL=Object.fromEntries(ORIG);
+const MOMENTS=[['midi','Midi'],['soir','Soir']];
+// Plat types: p = "Gratin de courgette", s = "Courgette vapeur"
+const CATS=[{id:'soupe',label:'Soupe',p:'Soupe'},{id:'gratin',label:'Gratin',p:'Gratin'},{id:'vapeur',label:'Vapeur',s:'vapeur'},{id:'poele',label:'Poêlé',s:'à la poêle'},{id:'four',label:'Au four',s:'au four'},{id:'salade',label:'Salade',p:'Salade'},{id:'puree',label:'Purée',p:'Purée'},{id:'mijote',label:'Mijoté',p:'Mijoté'},{id:'plancha',label:'Plancha',s:'à la plancha'}];
+const LS='platsrepas.v1';
+const $=s=>document.querySelector(s);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
+const byName=arr=>[...arr].sort((a,b)=>String(a.name).localeCompare(String(b.name),'fr'));
+const empty=()=>({v:1,aliments:[],plats:[],repas:[],planning:{},cats:[]});
+function clean(d){const s=empty();if(d&&typeof d==='object'){for(const k of['aliments','plats','repas','cats'])if(Array.isArray(d[k]))s[k]=d[k].filter(x=>x&&typeof x.id==='string');if(d.planning&&typeof d.planning==='object'&&!Array.isArray(d.planning))s.planning=d.planning}
+  s.aliments=s.aliments.map(a=>({id:a.id,name:String(a.name||''),type:TL[a.type]?a.type:'legume'}));
+  s.plats=s.plats.map(p=>({id:p.id,name:String(p.name||''),description:String(p.description||''),alimentIds:Array.isArray(p.alimentIds)?p.alimentIds.filter(x=>typeof x==='string'):[],cat:typeof p.cat==='string'?p.cat:'',origin:['maison','toutfait'].includes(p.origin)?p.origin:'',moment:ML[p.moment]?p.moment:'',fav:!!p.fav}));
+  s.repas=s.repas.map(r=>({id:r.id,name:String(r.name||''),slots:r.slots&&typeof r.slots==='object'?r.slots:{}}));
+  s.cats=s.cats.map(c=>({id:c.id,label:String(c.label||'')}));
+  return s}
+let S=empty();
+try{const raw=localStorage.getItem(LS);if(raw)S=clean(JSON.parse(raw))}catch(e){}
+const A=id=>S.aliments.find(x=>x.id===id),P=id=>S.plats.find(x=>x.id===id),R=id=>S.repas.find(x=>x.id===id);
+const allCats=()=>[...CATS,...S.cats];
+const C=id=>allCats().find(c=>c.id===id);
+const refObj=ref=>ref&&(ref.k==='a'?A(ref.id):ref.k==='p'?P(ref.id):null);
+const refName=ref=>refObj(ref)?.name||'';
+const summary=r=>SLOTS.map(([s])=>refName(r.slots[s])).filter(Boolean).join(' · ');
+const autoName=d=>refName(d.slots.plat)||SLOTS.map(([s])=>refName(d.slots[s])).filter(Boolean).slice(0,2).join(' et ');
+function ideaName(cat,al){const n=al.name.trim();if(cat.s)return n+' '+cat.s;const low=n.charAt(0).toLowerCase()+n.slice(1);return (cat.p||cat.label)+(/^[aeiouyhéèêœ]/i.test(norm(n)||n)?" d'":' de ')+low}
+
+/* ---------- sync : Supabase (cloud partagé du foyer) ---------- */
+const SB_URL='https://wpqlsuoekoywcbpftkqi.supabase.co',SB_KEY='sb_publishable_v_VIbigFsFBPhuxSqCEl8w_lsaBHwKH',HOME_ID='foyer';
+let sb=null,user=null,dirty=false,writing=false,wt=null,live=null,denied=false;
+function status(m){$('#status').textContent=m||''}
+const keepLocal=()=>{try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}};
+function persist(){keepLocal();if(user&&!denied){dirty=true;clearTimeout(wt);wt=setTimeout(flush,600)}}
+async function flush(){wt=null;if(!user||writing||!dirty||denied)return;writing=true;dirty=false;
+  const {error}=await sb.from('app_state').upsert({id:HOME_ID,data:JSON.parse(JSON.stringify(S)),updated_at:new Date().toISOString()});
+  writing=false;
+  if(error){dirty=true;if(error.code==='42501'){denied=true;status('Ce compte n’a pas accès aux données du foyer.')}else{status('Hors ligne : modifications gardées sur ce téléphone, envoi dès que possible.');wt=setTimeout(flush,5000)}return}
+  status('');if(dirty)flush()}
+async function pull(){if(!user||dirty||writing)return;const {data,error}=await sb.from('app_state').select('data').eq('id',HOME_ID).maybeSingle();
+  if(error){status('Cloud injoignable : données de ce téléphone affichées.');return}
+  if(dirty||writing)return;status('');
+  if(data&&data.data){S=clean(data.data);keepLocal();render()}
+  else if(S.aliments.length||S.plats.length||S.repas.length){dirty=true;flush()}}
+async function startSync(u){user=u;denied=false;status('Synchronisation…');await pull();
+  if(live)sb.removeChannel(live);
+  live=sb.channel('etat').on('postgres_changes',{event:'*',schema:'public',table:'app_state',filter:'id=eq.'+HOME_ID},p=>{if(dirty||writing||!p.new||!p.new.data)return;S=clean(p.new.data);keepLocal();render()}).subscribe()}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){if(dirty)flush();else pull()}});
+const ACCOUNT=()=>!sb?'<p class="muted">Cloud non configuré : données gardées sur ce téléphone.</p>':user?`<p>Connecté : <strong>${esc(user.email)}</strong></p><button type="button" class="ghost" id="lo">Se déconnecter</button>`:'<button type="button" class="primary" id="li">Se connecter</button>';
+function loginSheet(msg){openSheet(`<h2>Connexion</h2><p class="muted" style="margin:0">Un compte par personne du foyer. Vous voyez et modifiez les mêmes données.</p><form id="lf" novalidate>
+  <label>E-mail<input id="le" type="email" autocomplete="email" inputmode="email"></label><label>Mot de passe<input id="lp" type="password" autocomplete="current-password"></label>
+  <p class="err" id="lerr" role="alert">${esc(msg||'')}</p><div class="actions"><button type="button" class="ghost" id="lsu">Créer mon compte</button><button class="primary">Se connecter</button></div></form>`,root=>{
+  const go=async up=>{const email=root.querySelector('#le').value.trim(),password=root.querySelector('#lp').value,er=root.querySelector('#lerr');
+    if(!email||password.length<6){er.textContent='E-mail et mot de passe de 6 caractères minimum.';return}er.textContent='Un instant…';
+    const res=up?await sb.auth.signUp({email,password}):await sb.auth.signInWithPassword({email,password});
+    if(res.error){er.textContent=up?'Création impossible : '+res.error.message:'E-mail ou mot de passe incorrect.';return}
+    if(up&&!res.data.session){er.textContent='Compte créé. Clique sur le lien reçu par e-mail, puis reviens te connecter ici.';return}
+    closeSheet(1)};
+  root.querySelector('#lf').onsubmit=e=>{e.preventDefault();go(false)};root.querySelector('#lsu').onclick=()=>go(true)})}
+(async()=>{if(!window.supabase||SB_URL.startsWith('__')){status('Cloud non configuré : données gardées sur ce téléphone.');return}
+  sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
+  sb.auth.onAuthStateChange((ev,session)=>{const u=session?.user||null;
+    if(u&&(!user||user.id!==u.id))setTimeout(()=>startSync(u),0);
+    if(!u&&user){user=null;if(live)sb.removeChannel(live);live=null}});
+  const {data}=await sb.auth.getSession();if(!data.session)loginSheet()})();
+
+/* ---------- sheets & toast ---------- */
+const L1=$('#layer1'),L2=$('#layer2'),S1=$('#sheet1'),S2=$('#sheet2');
+function openSheet(html,mount,lvl=1){const L=lvl===2?L2:L1,el=lvl===2?S2:S1;if(lvl===1&&!L2.hidden)closeSheet(2);el.onclick=null;el.innerHTML=html;L.hidden=false;document.body.classList.add('lock');el.scrollTop=0;mount&&mount(el)}
+function closeSheet(lvl){(lvl===2?L2:L1).hidden=true;if(lvl===1)L2.hidden=true;if(L1.hidden&&L2.hidden)document.body.classList.remove('lock')}
+const closeTop=()=>closeSheet(L2.hidden?1:2);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!(L1.hidden&&L2.hidden))closeTop()});
+let tt;function toast(msg,undo){const el=$('#toast');el.innerHTML=`<span>${esc(msg)}</span>${undo?'<button type="button" id="undo">Annuler</button>':''}`;el.hidden=false;clearTimeout(tt);tt=setTimeout(()=>el.hidden=true,undo?7000:2200);if(undo)$('#undo').onclick=()=>{undo();el.hidden=true}}
+function withUndo(msg,fn){const before=JSON.stringify(S);fn();persist();render();toast(msg,()=>{S=clean(JSON.parse(before));persist();render()})}
+const alChip=a=>`<span class="chip t-${a.type}"><span class="dot"></span>${esc(a.name)}</span>`;
+
+/* ---------- aliment form ---------- */
+function alimentForm(id,preset){const a=id?A(id):null;let type=a?.type||preset?.type||'legume';let armed=false;
+  const used=id?byName(S.plats.filter(p=>p.alimentIds.includes(id))):[];
+  openSheet(`<h2>${a?esc(a.name):'Nouvel aliment'}</h2><form id="f" novalidate>
+  <label>Nom<input id="fn" value="${esc(a?.name||preset?.name||'')}" autocomplete="off" placeholder="ex. Courgette"></label>
+  <fieldset><legend>Type</legend><div class="seg" id="seg">${TYPES.map(([k,l])=>`<button type="button" class="tog t-${k}" data-type="${k}" aria-pressed="${k===type}"><span class="dot"></span>${l}</button>`).join('')}</div></fieldset>
+  ${a?`<h3>Plats avec ${esc(a.name)} <span class="muted">${used.length}</span></h3>${used.length?`<ul class="list">${used.map(p=>`<li><button type="button" class="row" data-open-plat="${esc(p.id)}"><span class="rmain"><strong>${p.fav?'★ ':''}${esc(p.name)}</strong></span>${C(p.cat)?`<span class="cat">${esc(C(p.cat).label)}</span>`:''}</button></li>`).join('')}</ul>`:'<p class="muted">Aucun plat pour l’instant.</p>'}
+  <div class="ideabox"><h3>Idées de plats</h3><p class="muted" style="margin:0">${esc(a.name)} croisé avec chaque type de plat. Touche une idée pour la créer.</p><div class="ideas">${ideasFor(a)}</div></div>`:''}
+  <p class="err" id="fe" role="alert"></p>
+  <div class="actions">${a?'<button type="button" class="danger" id="fd">Supprimer</button>':''}<button type="button" class="ghost" data-close>Annuler</button><button class="primary">Enregistrer</button></div></form>`,root=>{
+    if(!a)root.querySelector('#fn').focus();
+    root.onclick=e=>{const b=e.target.closest('[data-type]');if(b){type=b.dataset.type;root.querySelectorAll('#seg [data-type]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.type===type));return}
+      const i=e.target.closest('[data-idea]');if(i&&!i.disabled){platForm(null,{al:id,cat:i.dataset.idea});return}
+      if(e.target.id==='fd'){if(!armed){armed=true;e.target.textContent=used.length?`Supprimer (retiré de ${used.length} plat${used.length>1?'s':''})`:'Confirmer la suppression';return}closeSheet(1);delAliment(id)}};
+    root.querySelector('#f').onsubmit=e=>{e.preventDefault();const name=root.querySelector('#fn').value.trim();const fe=root.querySelector('#fe');
+      if(!name){fe.textContent='Donne un nom à l’aliment.';return}
+      if(S.aliments.some(x=>x.id!==id&&norm(x.name)===norm(name))){fe.textContent='Cet aliment existe déjà.';return}
+      const cur=id&&A(id);if(cur)Object.assign(cur,{name,type});else S.aliments.push({id:uid(),name,type});
+      persist();closeSheet(1);render();toast(cur?'Aliment modifié':'Aliment ajouté')}})}
+function ideasFor(a){return allCats().map(c=>{const ex=S.plats.find(p=>p.cat===c.id&&p.alimentIds.includes(a.id));
+  return ex?`<button type="button" class="idea" disabled title="Existe déjà">✓ ${esc(ex.name)}</button>`:`<button type="button" class="idea" data-idea="${esc(c.id)}">+ ${esc(ideaName(c,a))}</button>`}).join('')}
+
+/* ---------- plat form ---------- */
+function platForm(id,preset){const p=id?P(id):null;const d={al:new Set(p?p.alimentIds:preset?.al?[preset.al]:[]),cat:p?p.cat:preset?.cat||'',origin:p?p.origin:'',moment:p?p.moment:'',fav:p?p.fav:false};let armed=false;
+  const pa=preset?.al&&A(preset.al),pc=preset?.cat&&C(preset.cat);const pname=p?p.name:(pa&&pc?ideaName(pc,pa):'');
+  const inRepas=id?S.repas.filter(r=>Object.values(r.slots).some(s=>s&&s.k==='p'&&s.id===id)).length:0;
+  openSheet(`<h2>${p?'Modifier le plat':'Nouveau plat'}</h2><form id="f" novalidate>
+  <label>Nom<input id="fn" value="${esc(pname)}" autocomplete="off" placeholder="ex. Poulet rôti"></label>
+  <fieldset><legend>Catégorie</legend><div class="seg" id="ori"></div></fieldset>
+  <fieldset><legend>Plutôt pour</legend><div class="seg" id="mom"></div></fieldset>
+  <fieldset><legend>Type de plat</legend><div class="togs" id="cats"></div>
+  <div class="addtype"><input id="nc" placeholder="Autre type (ex. Wok)" autocomplete="off" aria-label="Nouveau type de plat"><button type="button" class="ghost" id="ncb">Ajouter</button></div></fieldset>
+  <label>Description<textarea id="fdsc" rows="3" placeholder="Comment tu le prépares, avec quoi…">${esc(p?.description||'')}</textarea></label>
+  <fieldset><legend>Aliments <span id="fcount" class="muted"></span></legend>
+  <input type="search" id="aq" placeholder="Chercher ou créer un aliment" autocomplete="off" aria-label="Chercher un aliment">
+  <div id="alc" class="togs" style="margin-top:10px"></div></fieldset>
+  <label style="display:flex;gap:10px;align-items:center;margin-top:18px"><input type="checkbox" id="ffav" ${d.fav?'checked':''} style="width:24px;min-height:24px;margin:0;accent-color:var(--star)"> ★ Plat favori</label>
+  ${inRepas?`<p class="muted">Utilisé dans ${inRepas} repas.</p>`:''}
+  <p class="err" id="fe" role="alert"></p>
+  <div class="actions">${p?'<button type="button" class="danger" id="fd">Supprimer</button>':''}<button type="button" class="ghost" data-close>Annuler</button><button class="primary">Enregistrer</button></div></form>`,root=>{
+    const q=root.querySelector('#aq');
+    const drawCats=()=>{root.querySelector('#cats').innerHTML=[{id:'',label:'Aucun'},...allCats()].map(c=>`<button type="button" class="tog" data-cat="${esc(c.id)}" aria-pressed="${d.cat===c.id}">${esc(c.label)}</button>`).join('')};
+    const draw=()=>{const raw=q.value.trim(),k=norm(raw);
+      const list=byName(S.aliments).filter(a=>!k||norm(a.name).includes(k)).sort((a,b)=>d.al.has(b.id)-d.al.has(a.id));
+      let h=list.map(a=>`<button type="button" class="tog t-${a.type}" data-al="${esc(a.id)}" aria-pressed="${d.al.has(a.id)}"><span class="dot"></span>${esc(a.name)}</button>`).join('');
+      if(raw&&!S.aliments.some(a=>norm(a.name)===k))h+=`<div class="create" style="width:100%"><p>Créer « ${esc(raw)} » comme :</p><div class="seg">${TYPES.map(([t,l])=>`<button type="button" class="tog t-${t}" data-mk="${t}"><span class="dot"></span>${l}</button>`).join('')}</div></div>`;
+      root.querySelector('#alc').innerHTML=h||'<p class="muted" style="margin:0">Tape un nom pour créer ton premier aliment.</p>';
+      root.querySelector('#fcount').textContent=d.al.size?`· ${d.al.size} choisi${d.al.size>1?'s':''}`:''};
+    const drawOri=()=>{root.querySelector('#ori').innerHTML=ORIG.map(([k,l])=>`<button type="button" class="tog" data-ori="${k}" aria-pressed="${d.origin===k}">${l}</button>`).join('')};
+    const drawMom=()=>{root.querySelector('#mom').innerHTML=MOM.map(([k,l])=>`<button type="button" class="tog" data-mom="${k}" aria-pressed="${d.moment===k}">${l}</button>`).join('')};
+    drawMom();drawOri();drawCats();draw();q.oninput=draw;if(!p&&!pname)root.querySelector('#fn').focus();
+    const addCat=()=>{const inp=root.querySelector('#nc'),label=inp.value.trim();if(!label)return;let c=allCats().find(x=>norm(x.label)===norm(label));
+      if(!c){c={id:'c'+uid(),label};S.cats.push(c);persist()}d.cat=c.id;inp.value='';drawCats()};
+    root.querySelector('#ncb').onclick=addCat;root.querySelector('#nc').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();addCat()}};
+    root.onclick=e=>{const o=e.target.closest('[data-ori]');if(o){d.origin=d.origin===o.dataset.ori?'':o.dataset.ori;drawOri();return}
+      const mo=e.target.closest('[data-mom]');if(mo){d.moment=d.moment===mo.dataset.mom?'':mo.dataset.mom;drawMom();return}
+      const c=e.target.closest('[data-cat]');if(c){d.cat=c.dataset.cat;drawCats();return}
+      const b=e.target.closest('[data-al]');if(b){const i=b.dataset.al;d.al.has(i)?d.al.delete(i):d.al.add(i);draw();return}
+      const m=e.target.closest('[data-mk]');if(m){const name=q.value.trim();if(!name)return;const na={id:uid(),name,type:m.dataset.mk};S.aliments.push(na);d.al.add(na.id);q.value='';persist();draw();render();return}
+      if(e.target.id==='fd'){if(!armed){armed=true;e.target.textContent=inRepas?`Supprimer (retiré de ${inRepas} repas)`:'Confirmer la suppression';return}closeSheet(1);delPlat(id)}};
+    root.querySelector('#f').onsubmit=e=>{e.preventDefault();const name=root.querySelector('#fn').value.trim(),fe=root.querySelector('#fe');
+      if(!name){fe.textContent='Donne un nom au plat.';return}
+      if(S.plats.some(x=>x.id!==id&&norm(x.name)===norm(name))){fe.textContent='Un plat porte déjà ce nom.';return}
+      const v={name,description:root.querySelector('#fdsc').value.trim(),alimentIds:[...d.al].filter(A),cat:d.cat,origin:d.origin,moment:d.moment,fav:root.querySelector('#ffav').checked};
+      const cur=id&&P(id);if(cur)Object.assign(cur,v);else S.plats.push({id:uid(),...v});
+      persist();closeSheet(1);render();toast(cur?'Plat modifié':'Plat ajouté')}})}
+
+/* ---------- repas form & slot picker ---------- */
+function repasForm(id,onSaved){const r=id?R(id):null;const d={slots:JSON.parse(JSON.stringify(r?.slots||{}))};let armed=false;
+  openSheet(`<h2>${r?'Modifier le repas':'Nouveau repas'}</h2><p class="muted" style="margin:0 0 12px">Chaque case peut être un aliment ou un plat.</p><form id="f" novalidate>
+  <div id="slots"></div>
+  <label>Nom du repas <span class="muted">(facultatif)</span><input id="fn" value="${esc(r?.name||'')}" autocomplete="off"></label>
+  <p class="err" id="fe" role="alert"></p>
+  <div class="actions">${r?'<button type="button" class="danger" id="fd">Supprimer</button>':''}<button type="button" class="ghost" data-close>Annuler</button><button class="primary">Enregistrer</button></div></form>`,root=>{
+    const draw=()=>{root.querySelector('#slots').innerHTML=SLOTS.map(([s,l])=>{const o=refObj(d.slots[s]);
+      return `<div class="slotrow"><button type="button" class="slotbtn" data-slot="${s}"><span class="sl">${l}</span>${o?(d.slots[s].k==='a'?`<span class="dot t-${o.type}"></span>`:'<span class="pl">Plat</span>')+`<span>${esc(o.name)}</span>`:'<span class="muted">Choisir…</span>'}</button>${o?`<button type="button" class="x" data-clear="${s}" aria-label="Retirer ${l}">×</button>`:''}</div>`}).join('');
+      root.querySelector('#fn').placeholder=autoName(d)||'Nom automatique'};
+    draw();
+    root.onclick=e=>{const s=e.target.closest('[data-slot]');if(s){slotPicker(s.dataset.slot,d,draw);return}
+      const c=e.target.closest('[data-clear]');if(c){delete d.slots[c.dataset.clear];draw();return}
+      if(e.target.id==='fd'){if(!armed){armed=true;e.target.textContent='Confirmer la suppression';return}closeSheet(1);delRepas(id)}};
+    root.querySelector('#f').onsubmit=e=>{e.preventDefault();const slots={};for(const [s] of SLOTS)if(refObj(d.slots[s]))slots[s]={k:d.slots[s].k,id:d.slots[s].id};
+      if(!Object.keys(slots).length){root.querySelector('#fe').textContent='Choisis au moins un élément.';return}
+      const name=root.querySelector('#fn').value.trim()||autoName({slots});const cur=id&&R(id);let rid=id;
+      if(cur)Object.assign(cur,{name,slots});else{rid=uid();S.repas.push({id:rid,name,slots})}
+      if(onSaved)onSaved(rid);persist();closeSheet(1);render();toast(cur?'Repas modifié':'Repas créé')}})}
+function slotPicker(slot,d,redraw){const hint=HINT[slot],platsFirst=['entree','plat','dessert'].includes(slot);
+  openSheet(`<h2>${SL[slot]}</h2><input type="search" id="sq" placeholder="Chercher un aliment ou un plat" autocomplete="off" aria-label="Chercher"><div id="sl"></div><div class="actions"><button type="button" class="ghost" data-close>Fermer</button></div>`,root=>{
+    const sq=root.querySelector('#sq');
+    const draw=()=>{const k=norm(sq.value),m=x=>!k||norm(x.name).includes(k),cur=d.slots[slot];
+      const item=(t,o)=>`<li><button type="button" class="row" data-ref="${t}:${esc(o.id)}" aria-pressed="${!!cur&&cur.k===t&&cur.id===o.id}">${t==='a'?`<span class="dot t-${o.type}"></span>`:'<span class="pl">Plat</span>'}<span class="rmain"><strong>${t==='p'&&o.fav?'★ ':''}${esc(o.name)}</strong></span>${t==='p'&&C(o.cat)?`<span class="cat">${esc(C(o.cat).label)}</span>`:''}</button></li>`;
+      const sec=(title,arr,t)=>arr.length?`<h3>${title}</h3><ul class="list">${arr.map(o=>item(t,o)).join('')}</ul>`:'';
+      const pl=byName(S.plats.filter(m)).sort((a,b)=>b.fav-a.fav);
+      const sug=sec('Aliments conseillés',byName(S.aliments.filter(a=>hint.includes(a.type)&&m(a))),'a'),pls=sec('Plats',pl,'p'),oth=sec('Autres aliments',byName(S.aliments.filter(a=>!hint.includes(a.type)&&m(a))),'a');
+      root.querySelector('#sl').innerHTML=(platsFirst?pls+sug:sug+pls)+oth||'<p class="muted">Rien ne correspond. Ajoute d’abord des aliments ou des plats.</p>'};
+    draw();sq.oninput=draw;
+    root.onclick=e=>{const b=e.target.closest('[data-ref]');if(!b)return;const [t,i]=b.dataset.ref.split(':');d.slots[slot]={k:t,id:i};closeSheet(2);redraw()}},2)}
+
+/* ---------- planning picker ---------- */
+const keyOf=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const fromKey=k=>{const [y,m,dd]=k.split('-').map(Number);return new Date(y,m-1,dd)};
+function assign(k,m,rid){const day={...(S.planning[k]||{})};if(rid)day[m]=rid;else delete day[m];if(Object.keys(day).length)S.planning[k]=day;else delete S.planning[k]}
+function planPick(k,m){const cur=S.planning[k]?.[m];const label=`${m==='midi'?'Midi':'Soir'}, ${fromKey(k).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}`;
+  openSheet(`<h2>${esc(label)}</h2>${S.repas.length?`<input type="search" id="pq" placeholder="Chercher un repas" autocomplete="off" aria-label="Chercher un repas" style="margin-top:10px"><ul class="list" id="pl" style="margin-top:10px"></ul>`:'<p class="muted">Aucun repas encore. Crée ton premier repas complet : entrée, plat, protéine, laitage, dessert.</p>'}
+  <div class="actions">${cur?'<button type="button" class="danger" id="pr">Retirer</button>':''}<button type="button" class="ghost" data-close>Fermer</button><button type="button" class="primary" id="pn">+ Nouveau repas</button></div>`,root=>{
+    const pq=root.querySelector('#pq');
+    const draw=()=>{if(!pq)return;const q=norm(pq.value);const arr=byName(S.repas).filter(r=>!q||norm(r.name+' '+summary(r)).includes(q));
+      root.querySelector('#pl').innerHTML=arr.map(r=>`<li><button type="button" class="row" data-pick="${esc(r.id)}" aria-pressed="${r.id===cur}"><span class="rmain"><strong>${esc(r.name)}</strong><span class="desc">${esc(summary(r))}</span></span></button></li>`).join('')||'<p class="muted">Aucun repas ne correspond.</p>'};
+    draw();if(pq)pq.oninput=draw;
+    root.onclick=e=>{const b=e.target.closest('[data-pick]');if(b){assign(k,m,b.dataset.pick);persist();closeSheet(1);render();return}
+      if(e.target.id==='pr'){closeSheet(1);withUndo('Repas retiré du planning',()=>assign(k,m,null));return}
+      if(e.target.id==='pn')repasForm(null,rid=>assign(k,m,rid))}})}
+
+/* ---------- deletes (with undo) ---------- */
+function delAliment(id){withUndo('Aliment supprimé',()=>{S.aliments=S.aliments.filter(a=>a.id!==id);S.plats.forEach(p=>p.alimentIds=p.alimentIds.filter(x=>x!==id));S.repas.forEach(r=>{for(const s in r.slots)if(r.slots[s]?.k==='a'&&r.slots[s].id===id)delete r.slots[s]})})}
+function delPlat(id){withUndo('Plat supprimé',()=>{S.plats=S.plats.filter(p=>p.id!==id);S.repas.forEach(r=>{for(const s in r.slots)if(r.slots[s]?.k==='p'&&r.slots[s].id===id)delete r.slots[s]})})}
+function delRepas(id){withUndo('Repas supprimé',()=>{S.repas=S.repas.filter(r=>r.id!==id);for(const k of Object.keys(S.planning))for(const m in S.planning[k])if(S.planning[k][m]===id)assign(k,m,null)})}
+
+/* ---------- starter content (only on request) ---------- */
+function starter(){const base={legume:['Brocoli','Courge Jack Be Little','Poireau','Endive','Fenouil','Courge spaghetti','Petits pois','Haricots verts','Carotte','Pomme de terre','Chou-fleur','Courgette','Aubergine','Tomate','Concombre','Radis Blue Meat','Patate douce','Épinards','Potimarron','Champignon'],feculent:['Riz','Blé','Pâtes','Spaghettis','Vermicelles','Maïs','Semoule'],laitage:['Babybel','Comté','Tofu','Lait','Yaourt','Ricotta'],proteine:['Jambon','Poulet','Œuf','Poisson','Poisson gras','Viande rouge','Dinde'],fruit:['Pomme','Poire','Compote'],legumineuse:['Lentilles','Pois chiches','Haricots blancs','Haricots rouges','Pois cassés']};
+  const get=(n,t)=>{let a=S.aliments.find(x=>norm(x.name)===norm(n));if(!a){a={id:uid(),name:n,type:t||'legume'};S.aliments.push(a)}return a.id};
+  for(const t in base)for(const n of base[t])get(n,t);
+  // [nom, aliments, type de plat, maison/tout fait, midi/soir, favori (liste « sélection »)]
+  const plats=[['Riz aux épinards',['Riz','Épinards'],'','','soir',1],['Riz à la courge Jack Be Little',['Riz','Courge Jack Be Little'],'','','soir',0],['Gratin de courge spaghetti',['Courge spaghetti'],'gratin','','midi',1],['Purée de blanc de poireau',['Poireau'],'puree','','midi',0],['Riz à la courgette',['Riz','Courgette'],'','','soir',1],['Fenouil à la tomate',['Fenouil','Tomate'],'','','midi',1],['Dinos Picard',['Poulet'],'','toutfait','midi',1],['Crudités',[],'salade','','midi',0],['Gratin de chou-fleur',['Chou-fleur'],'gratin','','midi',1],['Gratin de brocoli',['Brocoli'],'gratin','','midi',1],['Conserve de petits pois',['Petits pois'],'','toutfait','both',0],['Purée de pomme de terre et légume',['Pomme de terre'],'puree','','midi',1],['Gratin de patate douce et épinards',['Patate douce','Épinards'],'gratin','','midi',0],['Gaufres aux légumes',[],'','','midi',0],['Légumes vapeur',[],'vapeur','','midi',0],['Couscous',['Semoule'],'','','soir',0],['Pâtes aux épinards',['Pâtes','Épinards'],'','','soir',0],['Tarte aux poireaux',['Poireau'],'','','midi',0],['Dahl',['Lentilles'],'mijote','','both',1],['Lentilles au potimarron',['Lentilles','Potimarron'],'mijote','','both',0],['Raviolis ricotta épinards',['Ricotta','Épinards'],'','','',1],['Pâtes aux champignons',['Pâtes','Champignon'],'','','',1],['Œuf coque',['Œuf'],'','','',1],['Œuf dur',['Œuf'],'','','',0],['Sardines à l’huile',['Poisson gras'],'','toutfait','',1],['Quiche aux épinards',['Épinards','Œuf'],'','','',1],['Quiche aux poireaux',['Poireau','Œuf'],'','','',1],['Spaghettis bolognaise',['Spaghettis','Viande rouge','Tomate'],'','','',1],['Moussaka',['Aubergine','Viande rouge'],'four','','',0],['Soupe de légumes',[],'soupe','','',0],['Purée de chou-fleur',['Chou-fleur'],'puree','','',0],['Nuggets de poulet',['Poulet'],'','toutfait','',0]];
+  for(const [n,als,cat,origin,moment,fav] of plats)if(!S.plats.some(p=>norm(p.name)===norm(n)))S.plats.push({id:uid(),name:n,description:'',alimentIds:als.map(x=>get(x)),cat,origin,moment,fav:!!fav});
+  persist();render();toast('Tes listes ont été ajoutées')}
+
+/* ---------- données : export / import ---------- */
+function menuSheet(){const json=JSON.stringify(S);
+  openSheet(`<h2>Données</h2>${ACCOUNT()}<h3>Exporter</h3><p class="muted" style="margin-top:0">Copie toutes tes données pour les sauvegarder ou les mettre dans l’autre version de l’app.</p><button type="button" class="ghost" id="cp">Copier les données</button>
+  <h3>Importer</h3><p class="muted" style="margin-top:0">Colle des données copiées depuis l’app. Elles remplacent les données actuelles (tu pourras annuler).</p><textarea id="imp" rows="4" placeholder="Coller ici" aria-label="Données à importer"></textarea><p class="err" id="ie" role="alert"></p>
+  <div class="actions"><button type="button" class="ghost" data-close>Fermer</button><button type="button" class="primary" id="ib">Importer</button></div>`,root=>{
+    root.querySelector('#cp').onclick=async e=>{try{await navigator.clipboard.writeText(json);e.target.textContent='Copié ✓'}catch(x){const t=root.querySelector('#imp');t.value=json;t.focus();t.select();e.target.textContent='Texte sélectionné ci-dessous : copie-le'}};
+    root.querySelector('#ib').onclick=()=>{let d;try{d=JSON.parse(root.querySelector('#imp').value)}catch(x){root.querySelector('#ie').textContent='Ce texte n’est pas reconnu.';return}
+      const c=clean(d);if(!c.aliments.length&&!c.plats.length&&!c.repas.length){root.querySelector('#ie').textContent='Aucune donnée trouvée dans ce texte.';return}
+      closeSheet(1);withUndo(`Importé : ${c.aliments.length} aliments, ${c.plats.length} plats, ${c.repas.length} repas`,()=>{S=c})};
+    const lo=root.querySelector('#lo');if(lo)lo.onclick=async()=>{await sb.auth.signOut();closeSheet(1);loginSheet()};
+    const li=root.querySelector('#li');if(li)li.onclick=()=>loginSheet()})}
+
+/* ---------- views ---------- */
+const ui={q:{},tf:'',al:'',cat:'',ori:'',mom:'',fav:false,week:0};
+const search=(ph)=>`<input type="search" id="q" placeholder="${ph}" value="${esc(ui.q[route]||'')}" autocomplete="off" aria-label="${ph}">`;
+const V={
+planning:{title:'Planning',sub:()=>'Midi et soir, semaine par semaine',shell:()=>'<div id="list"></div>',list:()=>{
+  const now=new Date();now.setHours(0,0,0,0);const ws=new Date(now);ws.setDate(now.getDate()-((now.getDay()+6)%7)+ui.week*7);
+  const days=[...Array(7)].map((_,i)=>{const d=new Date(ws);d.setDate(ws.getDate()+i);return d});const tk=keyOf(now);
+  const f=d=>d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
+  return `<div class="weeknav"><button type="button" data-week="-1" aria-label="Semaine précédente">‹</button><div><strong>Du ${f(days[0])} au ${f(days[6])}</strong>${ui.week?'<button type="button" class="link" data-week="0">Revenir à cette semaine</button>':'<span class="muted">Cette semaine</span>'}</div><button type="button" data-week="1" aria-label="Semaine suivante">›</button></div>`+
+  days.map(d=>{const k=keyOf(d);return `<section class="day${k===tk?' today':''}"><h3>${d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}${k===tk?' <span class="muted">· aujourd’hui</span>':''}</h3>${MOMENTS.map(([m,ml])=>{const r=R(S.planning[k]?.[m]);
+    return `<button type="button" class="meal" data-day="${k}" data-moment="${m}"><span class="mlabel">${ml}</span>${r?`<span class="mbody"><strong>${esc(r.name)}</strong><span class="muted">${esc(summary(r))}</span></span>`:'<span class="mbody muted">+ Choisir un repas</span>'}</button>`}).join('')}</section>`}).join('')}},
+repas:{title:'Repas complets',sub:()=>`${S.repas.length} repas · entrée, plat, protéine, laitage, dessert`,shell:()=>`<div class="tools">${search('Chercher un repas')}</div><div id="list"></div>`,list:()=>{
+  if(!S.repas.length)return `<div class="empty"><p>Compose ton premier repas complet en piochant dans tes aliments et tes plats.</p><button type="button" class="primary" data-add>Créer un repas</button></div>`;
+  const q=norm(ui.q.repas);const arr=byName(S.repas).filter(r=>!q||norm(r.name+' '+summary(r)).includes(q));
+  return arr.length?`<ul class="list">${arr.map(r=>`<li><button type="button" class="card" data-open-repas="${esc(r.id)}"><strong>${esc(r.name)}</strong><span class="slots">${SLOTS.filter(([s])=>refName(r.slots[s])).map(([s,l])=>`<span class="k">${l}</span><span>${esc(refName(r.slots[s]))}</span>`).join('')}</span></button></li>`).join('')}</ul>`:'<p class="muted">Aucun repas ne correspond.</p>'}},
+plats:{title:'Plats',sub:()=>`${S.plats.length} plats · ${S.plats.filter(p=>p.fav).length} favoris`,shell:()=>{const used=allCats().filter(c=>S.plats.some(p=>p.cat===c.id));
+  return `<div class="tools">${search('Chercher un plat')}<div class="filters"><button type="button" class="fchip" data-favf aria-pressed="${ui.fav}" style="--c:var(--star)">★ Favoris</button>${ORIG.map(([k,l])=>`<button type="button" class="fchip" data-orif="${k}" aria-pressed="${ui.ori===k}">${l}</button>`).join('')}${[['midi','Midi'],['soir','Soir']].map(([k,l])=>`<button type="button" class="fchip" data-momf="${k}" aria-pressed="${ui.mom===k}">${l}</button>`).join('')}${used.map(c=>`<button type="button" class="fchip" data-catf="${esc(c.id)}" aria-pressed="${ui.cat===c.id}">${esc(c.label)}</button>`).join('')}</div>
+  <select id="alf" aria-label="Filtrer par aliment"><option value="">Tous les aliments</option>${TYPES.map(([t,l])=>{const arr=byName(S.aliments.filter(a=>a.type===t));return arr.length?`<optgroup label="${l}s">${arr.map(a=>`<option value="${esc(a.id)}"${ui.al===a.id?' selected':''}>${esc(a.name)}</option>`).join('')}</optgroup>`:''}).join('')}</select></div><div id="list"></div>`},list:()=>{
+  if(!S.plats.length)return `<div class="empty"><p>Pas encore de plat. Ajoute par exemple « Poulet rôti » avec ses aliments, ou commence avec des exemples.</p><button type="button" class="primary" data-add>Ajouter un plat</button> <button type="button" class="ghost" data-starter>Ajouter mes listes</button></div>`;
+  const q=norm(ui.q.plats),al=A(ui.al);
+  const arr=byName(S.plats).filter(p=>(!q||norm(p.name+' '+p.description).includes(q))&&(!al||p.alimentIds.includes(al.id))&&(!ui.cat||p.cat===ui.cat)&&(!ui.fav||p.fav)&&(!ui.ori||p.origin===ui.ori)&&(!ui.mom||p.moment===ui.mom||p.moment==='both')).sort((a,b)=>b.fav-a.fav);
+  let h=arr.length?`<ul class="list">${arr.map(p=>`<li class="rowwrap"><button type="button" class="row" data-open-plat="${esc(p.id)}"><span class="rmain"><strong>${esc(p.name)}${C(p.cat)?` <span class="cat">${esc(C(p.cat).label)}</span>`:''}${p.origin?` <span class="cat">${OL[p.origin]}</span>`:''}${p.moment?` <span class="cat">${ML[p.moment]}</span>`:''}</strong>${p.description?`<span class="desc">${esc(p.description)}</span>`:''}<span class="chips">${p.alimentIds.map(A).filter(Boolean).map(alChip).join('')}</span></span></button><button type="button" class="starbtn" data-star="${esc(p.id)}" aria-pressed="${p.fav}" aria-label="${p.fav?'Retirer des favoris':'Mettre en favori'}">${p.fav?'★':'☆'}</button></li>`).join('')}</ul>`:'<p class="muted">Aucun plat ne correspond.</p>';
+  if(al)h+=`<div class="ideabox"><h3>Idées avec ${esc(al.name)}</h3><div class="ideas">${ideasFor(al)}</div></div>`;return h}},
+aliments:{title:'Aliments',sub:()=>`${S.aliments.length} aliments`,shell:()=>`<div class="tools">${search('Chercher un aliment')}<div class="filters">${[['','Tous'],...TYPES].map(([k,l])=>`<button type="button" class="fchip ${k?'t-'+k:''}" data-tf="${k}" aria-pressed="${ui.tf===k}">${k?'<span class="dot"></span>':''}${l}</button>`).join('')}</div></div><div id="list"></div>`,list:()=>{
+  if(!S.aliments.length)return `<div class="empty"><p>Ta liste d’aliments est vide. Ajoute les tiens avec le bouton +, ou ajoute d’un coup tes listes papier : 48 aliments et 32 plats, que tu pourras modifier.</p><button type="button" class="primary" data-starter>Ajouter mes listes</button></div>`;
+  const q=norm(ui.q.aliments);let h='';
+  for(const [k,l] of TYPES){if(ui.tf&&ui.tf!==k)continue;const arr=byName(S.aliments.filter(a=>a.type===k&&(!q||norm(a.name).includes(q))));if(!arr.length)continue;
+    h+=`<section class="group"><h2 class="t-${k}"><span class="dot"></span>${l}s <span class="muted">${arr.length}</span></h2><ul class="list">${arr.map(a=>{const n=S.plats.filter(p=>p.alimentIds.includes(a.id)).length;return `<li><button type="button" class="row" data-open-al="${esc(a.id)}"><span class="rmain"><strong>${esc(a.name)}</strong></span><span class="muted">${n?n+' plat'+(n>1?'s':''):''}</span></button></li>`}).join('')}</ul></section>`}
+  return h||'<p class="muted">Aucun aliment ne correspond.</p>'}}};
+let route=location.hash.slice(1);if(!V[route])route='planning';
+function drawList(){const el=$('#list');if(el)el.innerHTML=V[route].list()}
+function render(){const v=V[route];$('#title').textContent=v.title;$('#sub').textContent=v.sub();document.title=v.title+' · Mes repas';
+  document.querySelectorAll('nav.tabs a').forEach(a=>a.dataset.r===route?a.setAttribute('aria-current','page'):a.removeAttribute('aria-current'));
+  $('#fab').hidden=route==='planning';$('#main').innerHTML=v.shell();drawList()}
+window.addEventListener('hashchange',()=>{const r=location.hash.slice(1);route=V[r]?r:'planning';closeSheet(1);render();window.scrollTo(0,0)});
+document.addEventListener('input',e=>{if(e.target.id==='q'){ui.q[route]=e.target.value;drawList()}});
+document.addEventListener('change',e=>{if(e.target.id==='alf'){ui.al=e.target.value;drawList()}});
+document.addEventListener('click',e=>{const t=e.target.closest('[data-close],button,a');if(!t)return;const ds=t.dataset;
+  if('close' in ds){closeTop();return}
+  if(t.id==='menu'){menuSheet();return}
+  if('add' in ds){({aliments:()=>alimentForm(),plats:()=>platForm(),repas:()=>repasForm()})[route]?.();return}
+  if(ds.openAl){alimentForm(ds.openAl);return}
+  if(ds.openPlat){platForm(ds.openPlat);return}
+  if(ds.openRepas){repasForm(ds.openRepas);return}
+  if(ds.star){const p=P(ds.star);if(p){p.fav=!p.fav;persist();render();toast(p.fav?'Ajouté aux favoris':'Retiré des favoris')}return}
+  if(ds.idea&&t.closest('#main')&&!t.disabled){platForm(null,{al:ui.al,cat:ds.idea});return}
+  if(ds.tf!==undefined){ui.tf=ds.tf;render();return}
+  if(ds.catf!==undefined){ui.cat=ui.cat===ds.catf?'':ds.catf;render();return}
+  if(ds.momf!==undefined){ui.mom=ui.mom===ds.momf?'':ds.momf;render();return}
+  if(ds.orif!==undefined){ui.ori=ui.ori===ds.orif?'':ds.orif;render();return}
+  if('favf' in ds){ui.fav=!ui.fav;render();return}
+  if(ds.week){ui.week=ds.week==='0'?0:ui.week+Number(ds.week);drawList();return}
+  if(ds.day){planPick(ds.day,ds.moment);return}
+  if('starter' in ds){starter();return}});
+render();
+}
+</script>
+</body>
+</html>
