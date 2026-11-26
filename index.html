@@ -240,7 +240,7 @@ function loginSheet(msg){openSheet(`<h2>Connexion</h2><p class="muted" style="ma
 
 
 /* ---------- mise à jour des aliments (audit du 26/11) ---------- */
-const MIG_LAST=22;
+const MIG_LAST=23;
 function migrate(){if((S.mig||0)>=MIG_LAST||!S.aliments.length)return false;S.mig=S.mig||0;
   if(S.mig<2){
   const find=n=>S.aliments.find(a=>norm(a.name)===norm(n));
@@ -318,6 +318,9 @@ function migrate(){if((S.mig||0)>=MIG_LAST||!S.aliments.length)return false;S.mi
     for(const w of S.weeks)w.days=w.days.map(d=>{const o={};for(const m of ['midi','soir']){const l=fr(d&&d[m]);if(l.length)o[m]=l}return o});
     S.mig=21}
   if(S.mig<22){if(!S.shops.includes('Franprix'))S.shops.push('Franprix');for(const x of [...S.aliments,...S.plats])if(/babybel/.test(norm(x.name)))x.shop='Franprix';S.mig=22}
+  if(S.mig<23){const c=S.aliments.find(x=>norm(x.name)==='compote de pomme'),g=S.aliments.find(x=>norm(x.name)==='compote en gourde');
+    if(c&&g){for(const p of S.plats){if(p.alimentIds.includes(c.id)){p.alimentIds=p.alimentIds.filter(x=>x!==c.id);if(!p.alimentIds.includes(g.id))p.alimentIds.push(g.id)}}const fix=sl=>{for(const s in sl||{})if(sl[s]?.k==='a'&&sl[s].id===c.id)sl[s].id=g.id};S.repas.forEach(r=>fix(r.slots));for(const k in S.planning)for(const m in S.planning[k])(Array.isArray(S.planning[k][m])?S.planning[k][m]:[]).forEach(e=>e&&fix(e.slots));S.weeks.forEach(w=>w.days.forEach(d=>{for(const m in d)(d[m]||[]).forEach(e=>e&&fix(e.slots))}));g.shop=g.shop||c.shop;S.aliments=S.aliments.filter(x=>x!==c)}
+    else if(c)c.name='Compote en gourde';S.mig=23}
   return true}
 
 /* ---------- sheets & toast ---------- */
