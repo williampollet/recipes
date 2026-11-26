@@ -19,7 +19,7 @@
    PICTURE: the working lists themselves (aliments by colour, plats, repas, the week).
    COLOUR and TYPE: saffron band, warm white ground, tomato accent; five food colours; Rubik.
    LAYOUT: one column up to 760px, bottom tab bar, sheets that slide up for every form. */
-:root{color-scheme:light;--bg:#f4f8f2;--ink:#17261c;--mute:#5f6f63;--card:#ffffff;--line:#dbe6d9;--band:#2f8f55;--bandink:#ffffff;--acc:#1f7a44;--danger:#c8372d;--legume:#3d9a4a;--feculent:#c08a1c;--fruit:#ec7420;--laitage:#3f7fc4;--proteine:#c43c3c;--legumineuse:#8a5a2b;--star:#f0a800}
+:root{color-scheme:light;--bg:#f4f8f2;--ink:#17261c;--mute:#5f6f63;--card:#ffffff;--line:#dbe6d9;--band:#2f8f55;--bandink:#ffffff;--acc:#1f7a44;--danger:#c8372d;--legume:#3d9a4a;--feculent:#c08a1c;--fruit:#ec7420;--laitage:#3f7fc4;--proteine:#c43c3c;--legumineuse:#8a5a2b;--epice:#2b8a8a;--star:#f0a800}
 :root[data-theme]{color-scheme:light}
 *{box-sizing:border-box;min-width:0}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Rubik,system-ui,sans-serif;overflow-x:clip;padding-bottom:calc(150px + env(safe-area-inset-bottom))}
@@ -45,7 +45,7 @@ h2{font-size:24px;line-height:1.15;margin:0 0 4px}h3{font-size:17px;margin:20px 
 .fchip,.tog{display:inline-flex;align-items:center;gap:7px;min-height:44px;padding:0 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);font-size:15px}
 .fchip[aria-pressed=true],.tog[aria-pressed=true]{border-color:var(--c,var(--ink));background:color-mix(in srgb,var(--c,var(--ink)) 18%,var(--card));font-weight:500}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--c,var(--mute));flex:none}
-.t-legume{--c:var(--legume)}.t-feculent{--c:var(--feculent)}.t-fruit{--c:var(--fruit)}.t-laitage{--c:var(--laitage)}.t-proteine{--c:var(--proteine)}.t-legumineuse{--c:var(--legumineuse)}
+.t-legume{--c:var(--legume)}.t-feculent{--c:var(--feculent)}.t-fruit{--c:var(--fruit)}.t-laitage{--c:var(--laitage)}.t-proteine{--c:var(--proteine)}.t-legumineuse{--c:var(--legumineuse)}.t-epice{--c:var(--epice)}
 .list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .row{width:100%;text-align:left;display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-height:56px}
 .row[aria-pressed=true]{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
@@ -137,7 +137,8 @@ nav svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;st
 <div id="toast" role="status" hidden></div>
 <script>
 {
-const TYPES=[['legume','Légume'],['feculent','Féculent'],['fruit','Fruit'],['laitage','Laitage'],['proteine','Protéine'],['legumineuse','Légumineuse']];
+const TYPES=[['legume','Légume'],['feculent','Féculent'],['fruit','Fruit'],['laitage','Laitage'],['proteine','Protéine'],['legumineuse','Légumineuse'],['epice','Épices & condiments']];
+const pl=l=>/s$/.test(l)?l:l+'s';
 const TL=Object.fromEntries(TYPES);
 const SLOTS=[['entree','Entrée'],['plat','Plat'],['proteine','Protéine'],['laitage','Laitage'],['dessert','Dessert']];
 const SL=Object.fromEntries(SLOTS);
@@ -239,7 +240,7 @@ function loginSheet(msg){openSheet(`<h2>Connexion</h2><p class="muted" style="ma
 
 
 /* ---------- mise à jour des aliments (audit du 26/11) ---------- */
-function migrate(){if((S.mig||0)>=14||!S.aliments.length)return false;S.mig=S.mig||0;
+function migrate(){if((S.mig||0)>=15||!S.aliments.length)return false;S.mig=S.mig||0;
   if(S.mig<2){
   const find=n=>S.aliments.find(a=>norm(a.name)===norm(n));
   const setType=(n,t)=>{const a=find(n);if(a)a.type=t};
@@ -290,6 +291,7 @@ function migrate(){if((S.mig||0)>=14||!S.aliments.length)return false;S.mig=S.mi
     for(const [n,als] of [['Galettes épinard pignon',[['Épinards','legume']]],['Galettes de pois chiche',[['Pois chiches','legumineuse']]],['Rollinis ricotta épinard',[['Ricotta','laitage'],['Épinards','legume']]]])if(!S.plats.some(x=>norm(x.name)===norm(n)))S.plats.push({id:uid(),name:n,description:'',alimentIds:als.map(([a,t])=>fa(a,t)),cat:'',origin:'toutfait',shop:'Bio c’ Bon',moment:'',fav:false,members:[],qty:{}});
     S.mig=13}
   if(S.mig<14){const o=S.aliments.find(x=>norm(x.name)==='oignon');if(o){o.shop=o.shop||'Marché'}else S.aliments.push({id:uid(),name:'Oignon',type:'legume',shop:'Marché'});S.mig=14}
+  if(S.mig<15){for(const n of ['Sel','Poivre','Ail','Curry','Cumin','Paprika','Curcuma','Gingembre','Cannelle','Muscade','Herbes de Provence','Thym','Laurier','Persil','Ciboulette','Basilic','Huile d’olive','Vinaigre','Moutarde','Sauce soja'])if(!S.aliments.some(x=>norm(x.name)===norm(n)))S.aliments.push({id:uid(),name:n,type:'epice'});else{const a=S.aliments.find(x=>norm(x.name)===norm(n));if(a.type==='legume'&&/^(ail|persil|ciboulette|basilic)$/.test(norm(n)))a.type='epice'}S.mig=15}
   return true}
 
 /* ---------- sheets & toast ---------- */
@@ -510,7 +512,7 @@ function coursesSheet(){const days=weekDays(ui.week),wk=keyOf(days[0]);const cs=
         const order=[...groups.keys()].sort((a,b)=>(a===''?1:0)-(b===''?1:0)||a.localeCompare(b,'fr'));
         for(const g of order){const arr=groups.get(g).sort((x,y)=>x.t-y.t||x.name.localeCompare(y.name,'fr'));lines.push('','#'+(g||'Sans magasin'));h+=`<h3>${esc(g||'Sans magasin')}</h3><ul class="cklist">${arr.map(x=>item(x.key,x.name,x.txt)).join('')}</ul>`}
       }else{
-      for(const [t,l] of TYPES){const arr=byName([...al.keys()].map(A).filter(a=>a&&a.type===t));if(!arr.length)continue;lines.push('','#'+l+'s');h+=`<h3 class="t-${t}" style="display:flex;gap:8px;align-items:center"><span class="dot"></span>${l}s</h3><ul class="cklist">${arr.map(a=>item('a:'+a.id,a.name,amount(al.get(a.id)))).join('')}</ul>`}
+      for(const [t,l] of TYPES){const arr=byName([...al.keys()].map(A).filter(a=>a&&a.type===t));if(!arr.length)continue;lines.push('','#'+pl(l));h+=`<h3 class="t-${t}" style="display:flex;gap:8px;align-items:center"><span class="dot"></span>${pl(l)}</h3><ul class="cklist">${arr.map(a=>item('a:'+a.id,a.name,amount(al.get(a.id)))).join('')}</ul>`}
       const rp=byName([...ready.keys()].map(P).filter(Boolean));if(rp.length){lines.push('','#Plats tout faits');h+=`<h3>Plats tout faits</h3><ul class="cklist">${rp.map(p=>item('p:'+p.id,p.name,amount(ready.get(p.id),1))).join('')}</ul>`}}
       if(cs.extra.length){lines.push('','#En plus');h+=`<h3>En plus</h3><ul class="cklist">${cs.extra.map((x,i)=>item('x:'+x,x,'').replace('</label></li>',`</label><button type="button" class="x" data-xdel="${i}" aria-label="Retirer ${esc(x)}">×</button></li>`)).join('')}</ul>`}
       if(h===h0&&!cs.extra.length)h='';
@@ -579,7 +581,7 @@ repas:{title:'Repas complets',sub:()=>`${S.repas.length} repas · entrée, plat,
   return arr.length?`<ul class="list">${arr.map(r=>`<li><button type="button" class="card" data-open-repas="${esc(r.id)}"><strong>${esc(r.name)}</strong><span class="slots">${SLOTS.filter(([s])=>refName(r.slots[s])).map(([s,l])=>`<span class="k">${l}</span><span>${esc(refName(r.slots[s]))}</span>`).join('')}</span></button></li>`).join('')}</ul>`:'<p class="muted">Aucun repas ne correspond.</p>'}},
 plats:{title:'Plats',sub:()=>`${S.plats.length} plats · ${S.plats.filter(p=>p.fav).length} favoris`,shell:()=>{const used=allCats().filter(c=>S.plats.some(p=>p.cat===c.id));
   return `<div class="tools">${search('Chercher un plat')}<div class="filters"><button type="button" class="fchip" data-favf aria-pressed="${ui.fav}" style="--c:var(--star)">★ Favoris</button>${ORIG.map(([k,l])=>`<button type="button" class="fchip" data-orif="${k}" aria-pressed="${ui.ori===k}">${l}</button>`).join('')}${S.members.map(m=>`<button type="button" class="fchip" data-memf="${esc(m.id)}" aria-pressed="${ui.mem===m.id}">${esc(m.name)}</button>`).join('')}${[['midi','Midi'],['soir','Soir']].map(([k,l])=>`<button type="button" class="fchip" data-momf="${k}" aria-pressed="${ui.mom===k}">${l}</button>`).join('')}${used.map(c=>`<button type="button" class="fchip" data-catf="${esc(c.id)}" aria-pressed="${ui.cat===c.id}">${esc(c.label)}</button>`).join('')}</div>
-  <select id="alf" aria-label="Filtrer par aliment"><option value="">Tous les aliments</option>${TYPES.map(([t,l])=>{const arr=byName(S.aliments.filter(a=>a.type===t));return arr.length?`<optgroup label="${l}s">${arr.map(a=>`<option value="${esc(a.id)}"${ui.al===a.id?' selected':''}>${esc(a.name)}</option>`).join('')}</optgroup>`:''}).join('')}</select></div><div id="list"></div>`},list:()=>{
+  <select id="alf" aria-label="Filtrer par aliment"><option value="">Tous les aliments</option>${TYPES.map(([t,l])=>{const arr=byName(S.aliments.filter(a=>a.type===t));return arr.length?`<optgroup label="${pl(l)}">${arr.map(a=>`<option value="${esc(a.id)}"${ui.al===a.id?' selected':''}>${esc(a.name)}</option>`).join('')}</optgroup>`:''}).join('')}</select></div><div id="list"></div>`},list:()=>{
   if(!S.plats.length)return `<div class="empty"><p>Pas encore de plat. Ajoute par exemple « Poulet rôti » avec ses aliments, ou commence avec des exemples.</p><button type="button" class="primary" data-add>Ajouter un plat</button> <button type="button" class="ghost" data-starter>Ajouter mes listes</button></div>`;
   const q=norm(ui.q.plats),al=A(ui.al);
   const arr=byName(S.plats).filter(p=>(!q||norm(p.name+' '+p.description).includes(q))&&(!al||p.alimentIds.includes(al.id))&&(!ui.cat||p.cat===ui.cat)&&(!ui.fav||p.fav)&&(!ui.ori||p.origin===ui.ori)&&(!ui.mom||p.moment===ui.mom||p.moment==='both')&&(!ui.mem||!M(ui.mem)||forMember(p,ui.mem))).sort((a,b)=>b.fav-a.fav);
@@ -589,7 +591,7 @@ aliments:{title:'Aliments',sub:()=>`${S.aliments.length} aliments`,shell:()=>`<d
   if(!S.aliments.length)return `<div class="empty"><p>Ta liste d’aliments est vide. Ajoute les tiens avec le bouton +, ou ajoute d’un coup tes listes papier : 48 aliments et 32 plats, que tu pourras modifier.</p><button type="button" class="primary" data-starter>Ajouter mes listes</button></div>`;
   const q=norm(ui.q.aliments);let h='';
   for(const [k,l] of TYPES){if(ui.tf&&ui.tf!==k)continue;const arr=byName(S.aliments.filter(a=>a.type===k&&(!q||norm(a.name).includes(q))));if(!arr.length)continue;
-    h+=`<section class="group"><h2 class="t-${k}"><span class="dot"></span>${l}s <span class="muted">${arr.length}</span></h2><ul class="list">${arr.map(a=>{const n=S.plats.filter(p=>p.alimentIds.includes(a.id)).length;return `<li><button type="button" class="row" data-open-al="${esc(a.id)}"><span class="rmain"><strong>${esc(a.name)}</strong></span><span class="muted">${[a.shop,n?n+' plat'+(n>1?'s':''):''].filter(Boolean).map(esc).join(' · ')}</span></button></li>`}).join('')}</ul></section>`}
+    h+=`<section class="group"><h2 class="t-${k}"><span class="dot"></span>${pl(l)} <span class="muted">${arr.length}</span></h2><ul class="list">${arr.map(a=>{const n=S.plats.filter(p=>p.alimentIds.includes(a.id)).length;return `<li><button type="button" class="row" data-open-al="${esc(a.id)}"><span class="rmain"><strong>${esc(a.name)}</strong></span><span class="muted">${[a.shop,n?n+' plat'+(n>1?'s':''):''].filter(Boolean).map(esc).join(' · ')}</span></button></li>`}).join('')}</ul></section>`}
   return h||'<p class="muted">Aucun aliment ne correspond.</p>'}}};
 let route=location.hash.slice(1);if(!V[route])route='planning';
 function drawList(){const el=$('#list');if(el)el.innerHTML=V[route].list()}
