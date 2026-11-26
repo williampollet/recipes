@@ -151,6 +151,7 @@ function clean(d){const s=empty();if(d&&typeof d==='object'){for(const k of['ali
   s.plats=s.plats.map(p=>({id:p.id,name:String(p.name||''),description:String(p.description||''),alimentIds:Array.isArray(p.alimentIds)?p.alimentIds.filter(x=>typeof x==='string'):[],cat:typeof p.cat==='string'?p.cat:'',origin:['maison','toutfait'].includes(p.origin)?p.origin:'',moment:ML[p.moment]?p.moment:'',fav:!!p.fav}));
   s.repas=s.repas.map(r=>({id:r.id,name:String(r.name||''),who:r.who==='enfant'?'enfant':'commun',slots:r.slots&&typeof r.slots==='object'?r.slots:{}}));
   s.weeks=s.weeks.map(w=>({id:w.id,name:String(w.name||'Semaine'),days:Array.isArray(w.days)?w.days.slice(0,7).map(d=>d&&typeof d==='object'?{midi:typeof d.midi==='string'?d.midi:undefined,soir:typeof d.soir==='string'?d.soir:undefined}:{}):[]}));
+  s.mig=Number(d&&d.mig)||0;
   s.cats=s.cats.map(c=>({id:c.id,label:String(c.label||'')}));
   return s}
 let S=empty();
@@ -178,11 +179,11 @@ async function flush(){wt=null;if(!user||writing||!dirty||denied)return;writing=
 async function pull(){if(!user||dirty||writing)return;const {data,error}=await sb.from('app_state').select('data').eq('id',HOME_ID).maybeSingle();
   if(error){status('Cloud injoignable : données de ce téléphone affichées.');return}
   if(dirty||writing)return;status('');
-  if(data&&data.data){S=clean(data.data);keepLocal();render()}
+  if(data&&data.data){S=clean(data.data);if(migrate()){persist();toast('Aliments mis à jour : corrections et nouveaux aliments')}else keepLocal();render()}
   else if(S.aliments.length||S.plats.length||S.repas.length){dirty=true;flush()}}
 async function startSync(u){user=u;denied=false;status('Synchronisation…');await pull();
   if(live)sb.removeChannel(live);
-  live=sb.channel('etat').on('postgres_changes',{event:'*',schema:'public',table:'app_state',filter:'id=eq.'+HOME_ID},p=>{if(dirty||writing||!p.new||!p.new.data)return;S=clean(p.new.data);keepLocal();render()}).subscribe()}
+  live=sb.channel('etat').on('postgres_changes',{event:'*',schema:'public',table:'app_state',filter:'id=eq.'+HOME_ID},p=>{if(dirty||writing||!p.new||!p.new.data)return;S=clean(p.new.data);if(migrate())persist();else keepLocal();render()}).subscribe()}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){if(dirty)flush();else pull()}});
 const ACCOUNT=()=>!sb?'<p class="muted">Cloud non configuré : données gardées sur ce téléphone.</p>':user?`<p>Connecté : <strong>${esc(user.email)}</strong></p><button type="button" class="ghost" id="lo">Se déconnecter</button>`:'<button type="button" class="primary" id="li">Se connecter</button>';
 function loginSheet(msg){openSheet(`<h2>Connexion</h2><p class="muted" style="margin:0">Un compte par personne du foyer. Vous voyez et modifiez les mêmes données.</p><form id="lf" novalidate>
@@ -201,6 +202,18 @@ function loginSheet(msg){openSheet(`<h2>Connexion</h2><p class="muted" style="ma
     if(u&&(!user||user.id!==u.id))setTimeout(()=>startSync(u),0);
     if(!u&&user){user=null;if(live)sb.removeChannel(live);live=null}});
   const {data}=await sb.auth.getSession();if(!data.session)loginSheet()})();
+
+
+/* ---------- mise à jour des aliments (audit du 26/11) ---------- */
+function migrate(){if(S.mig>=2||!S.aliments.length)return false;
+  const find=n=>S.aliments.find(a=>norm(a.name)===norm(n));
+  const setType=(n,t)=>{const a=find(n);if(a)a.type=t};
+  setType('Tofu','proteine');setType('Pomme de terre','feculent');setType('Patate douce','feculent');
+  const vr=find('Viande rouge');if(vr&&!find('Bœuf haché'))vr.name='Bœuf haché';
+  const add={legume:['Butternut','Poivron','Betterave','Panais','Navet','Chou de Bruxelles','Avocat','Haricots plats'],feculent:['Quinoa','Boulgour','Polenta','Gnocchis','Pain','Coquillettes'],fruit:['Banane','Clémentine','Orange','Kiwi','Fraise','Framboise','Abricot','Pêche','Raisin','Mangue','Melon'],laitage:['Fromage blanc','Petit-suisse','Emmental','Mozzarella','Chèvre','Fromage râpé'],proteine:['Bœuf haché','Steak','Saumon','Cabillaud','Thon','Filet mignon de porc','Crevettes'],legumineuse:['Lentilles corail','Flageolets']};
+  for(const t in add)for(const n of add[t])if(!find(n))S.aliments.push({id:uid(),name:n,type:t});
+  const dahl=S.plats.find(p=>norm(p.name)==='dahl'),lc=find('Lentilles corail');if(dahl&&lc&&!dahl.alimentIds.includes(lc.id))dahl.alimentIds.push(lc.id);
+  S.mig=2;return true}
 
 /* ---------- sheets & toast ---------- */
 const L1=$('#layer1'),L2=$('#layer2'),S1=$('#sheet1'),S2=$('#sheet2');
@@ -365,7 +378,7 @@ function starter(){const base={legume:['Brocoli','Courge Jack Be Little','Poirea
   // [nom, aliments, type de plat, maison/tout fait, midi/soir, favori (liste « sélection »)]
   const plats=[['Riz aux épinards',['Riz','Épinards'],'','','soir',1],['Riz à la courge Jack Be Little',['Riz','Courge Jack Be Little'],'','','soir',0],['Gratin de courge spaghetti',['Courge spaghetti'],'gratin','','midi',1],['Purée de blanc de poireau',['Poireau'],'puree','','midi',0],['Riz à la courgette',['Riz','Courgette'],'','','soir',1],['Fenouil à la tomate',['Fenouil','Tomate'],'','','midi',1],['Dinos Picard',['Poulet'],'','toutfait','midi',1],['Crudités',[],'salade','','midi',0],['Gratin de chou-fleur',['Chou-fleur'],'gratin','','midi',1],['Gratin de brocoli',['Brocoli'],'gratin','','midi',1],['Conserve de petits pois',['Petits pois'],'','toutfait','both',0],['Purée de pomme de terre et légume',['Pomme de terre'],'puree','','midi',1],['Gratin de patate douce et épinards',['Patate douce','Épinards'],'gratin','','midi',0],['Gaufres aux légumes',[],'','','midi',0],['Légumes vapeur',[],'vapeur','','midi',0],['Couscous',['Semoule'],'','','soir',0],['Pâtes aux épinards',['Pâtes','Épinards'],'','','soir',0],['Tarte aux poireaux',['Poireau'],'','','midi',0],['Dahl',['Lentilles'],'mijote','','both',1],['Lentilles au potimarron',['Lentilles','Potimarron'],'mijote','','both',0],['Raviolis ricotta épinards',['Ricotta','Épinards'],'','','',1],['Pâtes aux champignons',['Pâtes','Champignon'],'','','',1],['Œuf coque',['Œuf'],'','','',1],['Œuf dur',['Œuf'],'','','',0],['Sardines à l’huile',['Poisson gras'],'','toutfait','',1],['Quiche aux épinards',['Épinards','Œuf'],'','','',1],['Quiche aux poireaux',['Poireau','Œuf'],'','','',1],['Spaghettis bolognaise',['Spaghettis','Viande rouge','Tomate'],'','','',1],['Moussaka',['Aubergine','Viande rouge'],'four','','',0],['Soupe de légumes',[],'soupe','','',0],['Purée de chou-fleur',['Chou-fleur'],'puree','','',0],['Nuggets de poulet',['Poulet'],'','toutfait','',0]];
   for(const [n,als,cat,origin,moment,fav] of plats)if(!S.plats.some(p=>norm(p.name)===norm(n)))S.plats.push({id:uid(),name:n,description:'',alimentIds:als.map(x=>get(x)),cat,origin,moment,fav:!!fav});
-  persist();render();toast('Tes listes ont été ajoutées')}
+  migrate();persist();render();toast('Tes listes ont été ajoutées')}
 
 /* ---------- données : export / import ---------- */
 function menuSheet(){const json=JSON.stringify(S);
@@ -436,6 +449,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-close],but
   if('wsheet' in ds){weekSheet();return}
   if('wpaste' in ds&&clip){writeWeek(ui.week,clip,'Semaine collée');return}
   if('starter' in ds){starter();return}});
+if(migrate())persist();
 render();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
