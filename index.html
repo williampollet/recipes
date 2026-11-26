@@ -238,7 +238,7 @@ function loginSheet(msg){openSheet(`<h2>Connexion</h2><p class="muted" style="ma
 
 
 /* ---------- mise à jour des aliments (audit du 26/11) ---------- */
-function migrate(){if((S.mig||0)>=8||!S.aliments.length)return false;S.mig=S.mig||0;
+function migrate(){if((S.mig||0)>=9||!S.aliments.length)return false;S.mig=S.mig||0;
   if(S.mig<2){
   const find=n=>S.aliments.find(a=>norm(a.name)===norm(n));
   const setType=(n,t)=>{const a=find(n);if(a)a.type=t};
@@ -275,6 +275,7 @@ function migrate(){if((S.mig||0)>=8||!S.aliments.length)return false;S.mig=S.mig
     for(const k of Object.keys(S.planning))for(const m of Object.keys(S.planning[k]))assign(k,m,slotEntries(k,m));
     for(const w of S.weeks)w.days=w.days.map(d=>{const o={};for(const [m] of MOMENTS){const l=entriesAt(d&&d[m]).map(e=>({r:e.r,members:entryMembers(e)}));if(l.length)o[m]=l}return o});S.mig=7}
   if(S.mig<8){const sh=(n,v)=>{for(const x of [...S.aliments,...S.plats])if(norm(x.name)===norm(n)&&!x.shop)x.shop=v};sh('Dinos Picard','Picard');sh('Pain','Boulangerie');sh('Comté','Fromagerie');S.mig=8}
+  if(S.mig<9){for(const x of [...S.aliments,...S.plats])if(/dino|picard/.test(norm(x.name))&&!x.shop)x.shop='Picard';S.mig=9}
   return true}
 
 /* ---------- sheets & toast ---------- */
@@ -568,7 +569,7 @@ plats:{title:'Plats',sub:()=>`${S.plats.length} plats · ${S.plats.filter(p=>p.f
   if(!S.plats.length)return `<div class="empty"><p>Pas encore de plat. Ajoute par exemple « Poulet rôti » avec ses aliments, ou commence avec des exemples.</p><button type="button" class="primary" data-add>Ajouter un plat</button> <button type="button" class="ghost" data-starter>Ajouter mes listes</button></div>`;
   const q=norm(ui.q.plats),al=A(ui.al);
   const arr=byName(S.plats).filter(p=>(!q||norm(p.name+' '+p.description).includes(q))&&(!al||p.alimentIds.includes(al.id))&&(!ui.cat||p.cat===ui.cat)&&(!ui.fav||p.fav)&&(!ui.ori||p.origin===ui.ori)&&(!ui.mom||p.moment===ui.mom||p.moment==='both')&&(!ui.mem||!M(ui.mem)||forMember(p,ui.mem))).sort((a,b)=>b.fav-a.fav);
-  let h=arr.length?`<ul class="list">${arr.map(p=>`<li class="rowwrap"><button type="button" class="row" data-open-plat="${esc(p.id)}"><span class="rmain"><strong>${esc(p.name)}${C(p.cat)?` <span class="cat">${esc(C(p.cat).label)}</span>`:''}${p.origin?` <span class="cat">${OL[p.origin]}</span>`:''}${p.moment?` <span class="cat">${ML[p.moment]}</span>`:''}${tagHtml(forTxt(p.members))}</strong>${p.description?`<span class="desc">${esc(p.description)}</span>`:''}<span class="chips">${p.alimentIds.map(A).filter(Boolean).map(alChip).join('')}</span></span></button><button type="button" class="starbtn" data-star="${esc(p.id)}" aria-pressed="${p.fav}" aria-label="${p.fav?'Retirer des favoris':'Mettre en favori'}">${p.fav?'★':'☆'}</button></li>`).join('')}</ul>`:'<p class="muted">Aucun plat ne correspond.</p>';
+  let h=arr.length?`<ul class="list">${arr.map(p=>`<li class="rowwrap"><button type="button" class="row" data-open-plat="${esc(p.id)}"><span class="rmain"><strong>${esc(p.name)}${C(p.cat)?` <span class="cat">${esc(C(p.cat).label)}</span>`:''}${p.origin?` <span class="cat">${OL[p.origin]}</span>`:''}${p.shop?` <span class="cat">${esc(p.shop)}</span>`:''}${p.moment?` <span class="cat">${ML[p.moment]}</span>`:''}${tagHtml(forTxt(p.members))}</strong>${p.description?`<span class="desc">${esc(p.description)}</span>`:''}<span class="chips">${p.alimentIds.map(A).filter(Boolean).map(alChip).join('')}</span></span></button><button type="button" class="starbtn" data-star="${esc(p.id)}" aria-pressed="${p.fav}" aria-label="${p.fav?'Retirer des favoris':'Mettre en favori'}">${p.fav?'★':'☆'}</button></li>`).join('')}</ul>`:'<p class="muted">Aucun plat ne correspond.</p>';
   if(al)h+=`<div class="ideabox"><h3>Idées avec ${esc(al.name)}</h3><div class="ideas">${ideasFor(al)}</div></div>`;return h}},
 aliments:{title:'Aliments',sub:()=>`${S.aliments.length} aliments`,shell:()=>`<div class="tools">${search('Chercher un aliment')}<div class="filters">${[['','Tous'],...TYPES].map(([k,l])=>`<button type="button" class="fchip ${k?'t-'+k:''}" data-tf="${k}" aria-pressed="${ui.tf===k}">${k?'<span class="dot"></span>':''}${l}</button>`).join('')}</div></div><div id="list"></div>`,list:()=>{
   if(!S.aliments.length)return `<div class="empty"><p>Ta liste d’aliments est vide. Ajoute les tiens avec le bouton +, ou ajoute d’un coup tes listes papier : 48 aliments et 32 plats, que tu pourras modifier.</p><button type="button" class="primary" data-starter>Ajouter mes listes</button></div>`;
