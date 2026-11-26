@@ -238,7 +238,7 @@ function loginSheet(msg){openSheet(`<h2>Connexion</h2><p class="muted" style="ma
 
 
 /* ---------- mise à jour des aliments (audit du 26/11) ---------- */
-function migrate(){if((S.mig||0)>=13||!S.aliments.length)return false;S.mig=S.mig||0;
+function migrate(){if((S.mig||0)>=14||!S.aliments.length)return false;S.mig=S.mig||0;
   if(S.mig<2){
   const find=n=>S.aliments.find(a=>norm(a.name)===norm(n));
   const setType=(n,t)=>{const a=find(n);if(a)a.type=t};
@@ -288,6 +288,7 @@ function migrate(){if((S.mig||0)>=13||!S.aliments.length)return false;S.mig=S.mi
   if(S.mig<13){const fa=(n,t)=>{let a=S.aliments.find(x=>norm(x.name)===norm(n));if(!a){a={id:uid(),name:n,type:t};S.aliments.push(a)}return a.id};
     for(const [n,als] of [['Galettes épinard pignon',[['Épinards','legume']]],['Galettes de pois chiche',[['Pois chiches','legumineuse']]],['Rollinis ricotta épinard',[['Ricotta','laitage'],['Épinards','legume']]]])if(!S.plats.some(x=>norm(x.name)===norm(n)))S.plats.push({id:uid(),name:n,description:'',alimentIds:als.map(([a,t])=>fa(a,t)),cat:'',origin:'toutfait',shop:'Bio c’ Bon',moment:'',fav:false,members:[],qty:{}});
     S.mig=13}
+  if(S.mig<14){const o=S.aliments.find(x=>norm(x.name)==='oignon');if(o){o.shop=o.shop||'Marché'}else S.aliments.push({id:uid(),name:'Oignon',type:'legume',shop:'Marché'});S.mig=14}
   return true}
 
 /* ---------- sheets & toast ---------- */
