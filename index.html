@@ -68,6 +68,7 @@ h2{font-size:24px;line-height:1.15;margin:0 0 4px}h3{font-size:17px;margin:20px 
 .weeknav>div{flex:1;text-align:center;display:flex;flex-direction:column}
 .weeknav>button{width:46px;height:46px;border-radius:50%;border:1.5px solid var(--line);background:var(--card);font-size:22px}
 .link{border:0;background:none;color:var(--acc);text-decoration:underline;padding:4px;font-size:14px}
+.weektools{display:flex;flex-wrap:wrap;gap:8px;margin:-2px 0 12px}.weektools .ghost{flex:1}
 .day{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 12px 4px;margin-bottom:10px}
 .day.today{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
 .day h3{margin:0 0 4px;font-size:17px}.day h3::first-letter{text-transform:uppercase}
@@ -141,11 +142,12 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
 const byName=arr=>[...arr].sort((a,b)=>String(a.name).localeCompare(String(b.name),'fr'));
-const empty=()=>({v:1,aliments:[],plats:[],repas:[],planning:{},cats:[]});
-function clean(d){const s=empty();if(d&&typeof d==='object'){for(const k of['aliments','plats','repas','cats'])if(Array.isArray(d[k]))s[k]=d[k].filter(x=>x&&typeof x.id==='string');if(d.planning&&typeof d.planning==='object'&&!Array.isArray(d.planning))s.planning=d.planning}
+const empty=()=>({v:1,aliments:[],plats:[],repas:[],planning:{},cats:[],weeks:[]});
+function clean(d){const s=empty();if(d&&typeof d==='object'){for(const k of['aliments','plats','repas','cats','weeks'])if(Array.isArray(d[k]))s[k]=d[k].filter(x=>x&&typeof x.id==='string');if(d.planning&&typeof d.planning==='object'&&!Array.isArray(d.planning))s.planning=d.planning}
   s.aliments=s.aliments.map(a=>({id:a.id,name:String(a.name||''),type:TL[a.type]?a.type:'legume'}));
   s.plats=s.plats.map(p=>({id:p.id,name:String(p.name||''),description:String(p.description||''),alimentIds:Array.isArray(p.alimentIds)?p.alimentIds.filter(x=>typeof x==='string'):[],cat:typeof p.cat==='string'?p.cat:'',origin:['maison','toutfait'].includes(p.origin)?p.origin:'',moment:ML[p.moment]?p.moment:'',fav:!!p.fav}));
   s.repas=s.repas.map(r=>({id:r.id,name:String(r.name||''),slots:r.slots&&typeof r.slots==='object'?r.slots:{}}));
+  s.weeks=s.weeks.map(w=>({id:w.id,name:String(w.name||'Semaine'),days:Array.isArray(w.days)?w.days.slice(0,7).map(d=>d&&typeof d==='object'?{midi:typeof d.midi==='string'?d.midi:undefined,soir:typeof d.soir==='string'?d.soir:undefined}:{}):[]}));
   s.cats=s.cats.map(c=>({id:c.id,label:String(c.label||'')}));
   return s}
 let S=empty();
@@ -320,6 +322,31 @@ function planPick(k,m){const cur=S.planning[k]?.[m];const label=`${m==='midi'?'M
       if(e.target.id==='pr'){closeSheet(1);withUndo('Repas retiré du planning',()=>assign(k,m,null));return}
       if(e.target.id==='pn')repasForm(null,rid=>assign(k,m,rid))}})}
 
+
+/* ---------- modèles de semaine ---------- */
+let clip=null;
+function weekDays(off){const now=new Date();now.setHours(0,0,0,0);const ws=new Date(now);ws.setDate(now.getDate()-((now.getDay()+6)%7)+off*7);return [...Array(7)].map((_,i)=>{const d=new Date(ws);d.setDate(ws.getDate()+i);return d})}
+const readWeek=off=>weekDays(off).map(d=>{const p=S.planning[keyOf(d)]||{};const o={};for(const [m] of MOMENTS)if(R(p[m]))o[m]=p[m];return o});
+const countWeek=days=>days.reduce((n,d)=>n+MOMENTS.filter(([m])=>d&&R(d[m])).length,0);
+function writeWeek(off,days,msg){withUndo(msg,()=>weekDays(off).forEach((d,i)=>{const k=keyOf(d);for(const [m] of MOMENTS)assign(k,m,days[i]&&R(days[i][m])?days[i][m]:null)}))}
+const DAYS=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+function weekSheet(){const cur=readWeek(ui.week),n=countWeek(cur);
+  openSheet(`<h2>Modèles de semaine</h2><p class="muted" style="margin:0">Pour la semaine affichée (${n} repas prévus).</p>
+  <h3>Copier / coller</h3><div class="seg"><button type="button" class="ghost" id="wc" ${n?'':'disabled'}>Copier cette semaine</button><button type="button" class="ghost" id="wp" ${clip?'':'disabled'}>Coller ${clip?`(${countWeek(clip)} repas)`:''}</button><button type="button" class="ghost" id="wx" ${n?'':'disabled'}>Vider la semaine</button></div>
+  <h3>Enregistrer comme modèle</h3><div class="addtype"><input id="wn" placeholder="ex. Semaine classique" autocomplete="off" aria-label="Nom du modèle"><button type="button" class="primary" id="ws" ${n?'':'disabled'}>Enregistrer</button></div><p class="err" id="we" role="alert"></p>
+  <h3>Appliquer un modèle</h3><ul class="list" id="wl"></ul>
+  <div class="actions"><button type="button" class="ghost" data-close>Fermer</button></div>`,root=>{
+    const draw=()=>{root.querySelector('#wl').innerHTML=S.weeks.length?byName(S.weeks).map(w=>`<li class="rowwrap"><button type="button" class="row" data-wapply="${esc(w.id)}"><span class="rmain"><strong>${esc(w.name)}</strong><span class="desc">${esc(w.days.map((d,i)=>{const x=MOMENTS.map(([m])=>R(d[m])?.name).filter(Boolean);return x.length?DAYS[i]+' : '+x.join(', '):''}).filter(Boolean).join(' · '))}</span></span></button><button type="button" class="starbtn" data-wdel="${esc(w.id)}" aria-label="Supprimer le modèle ${esc(w.name)}">×</button></li>`).join(''):'<p class="muted" style="margin:0">Aucun modèle pour l’instant. Remplis une semaine, puis enregistre-la ici.</p>'};
+    draw();
+    root.onclick=e=>{const t=e.target.closest('button');if(!t)return;
+      if(t.id==='wc'){clip=cur;closeSheet(1);toast('Semaine copiée : va sur une autre semaine et colle-la');return}
+      if(t.id==='wp'&&clip){closeSheet(1);writeWeek(ui.week,clip,'Semaine collée');return}
+      if(t.id==='wx'){closeSheet(1);writeWeek(ui.week,[],'Semaine vidée');return}
+      if(t.id==='ws'){const name=root.querySelector('#wn').value.trim();if(!name){root.querySelector('#we').textContent='Donne un nom au modèle.';return}
+        const ex=S.weeks.find(w=>norm(w.name)===norm(name));if(ex)ex.days=cur;else S.weeks.push({id:uid(),name,days:cur});persist();closeSheet(1);toast(ex?'Modèle mis à jour':'Modèle enregistré');return}
+      if(t.dataset.wapply){const w=S.weeks.find(x=>x.id===t.dataset.wapply);if(w){closeSheet(1);writeWeek(ui.week,w.days,`Modèle « ${w.name} » appliqué`)}return}
+      if(t.dataset.wdel){const w=S.weeks.find(x=>x.id===t.dataset.wdel);if(!w)return;if(t.dataset.armed){withUndo('Modèle supprimé',()=>{S.weeks=S.weeks.filter(x=>x.id!==w.id)});draw();}else{t.dataset.armed='1';t.textContent='✓';t.setAttribute('aria-label','Confirmer la suppression')}}}})}
+
 /* ---------- deletes (with undo) ---------- */
 function delAliment(id){withUndo('Aliment supprimé',()=>{S.aliments=S.aliments.filter(a=>a.id!==id);S.plats.forEach(p=>p.alimentIds=p.alimentIds.filter(x=>x!==id));S.repas.forEach(r=>{for(const s in r.slots)if(r.slots[s]?.k==='a'&&r.slots[s].id===id)delete r.slots[s]})})}
 function delPlat(id){withUndo('Plat supprimé',()=>{S.plats=S.plats.filter(p=>p.id!==id);S.repas.forEach(r=>{for(const s in r.slots)if(r.slots[s]?.k==='p'&&r.slots[s].id===id)delete r.slots[s]})})}
@@ -354,7 +381,7 @@ planning:{title:'Planning',sub:()=>'Midi et soir, semaine par semaine',shell:()=
   const now=new Date();now.setHours(0,0,0,0);const ws=new Date(now);ws.setDate(now.getDate()-((now.getDay()+6)%7)+ui.week*7);
   const days=[...Array(7)].map((_,i)=>{const d=new Date(ws);d.setDate(ws.getDate()+i);return d});const tk=keyOf(now);
   const f=d=>d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
-  return `<div class="weeknav"><button type="button" data-week="-1" aria-label="Semaine précédente">‹</button><div><strong>Du ${f(days[0])} au ${f(days[6])}</strong>${ui.week?'<button type="button" class="link" data-week="0">Revenir à cette semaine</button>':'<span class="muted">Cette semaine</span>'}</div><button type="button" data-week="1" aria-label="Semaine suivante">›</button></div>`+
+  return `<div class="weeknav"><button type="button" data-week="-1" aria-label="Semaine précédente">‹</button><div><strong>Du ${f(days[0])} au ${f(days[6])}</strong>${ui.week?'<button type="button" class="link" data-week="0">Revenir à cette semaine</button>':'<span class="muted">Cette semaine</span>'}</div><button type="button" data-week="1" aria-label="Semaine suivante">›</button></div><div class="weektools"><button type="button" class="ghost" data-wsheet>Modèles et copier / coller</button>${clip?'<button type="button" class="ghost" data-wpaste>Coller la semaine copiée</button>':''}</div>`+
   days.map(d=>{const k=keyOf(d);return `<section class="day${k===tk?' today':''}"><h3>${d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}${k===tk?' <span class="muted">· aujourd’hui</span>':''}</h3>${MOMENTS.map(([m,ml])=>{const r=R(S.planning[k]?.[m]);
     return `<button type="button" class="meal" data-day="${k}" data-moment="${m}"><span class="mlabel">${ml}</span>${r?`<span class="mbody"><strong>${esc(r.name)}</strong><span class="muted">${esc(summary(r))}</span></span>`:'<span class="mbody muted">+ Choisir un repas</span>'}</button>`}).join('')}</section>`}).join('')}},
 repas:{title:'Repas complets',sub:()=>`${S.repas.length} repas · entrée, plat, protéine, laitage, dessert`,shell:()=>`<div class="tools">${search('Chercher un repas')}</div><div id="list"></div>`,list:()=>{
@@ -399,6 +426,8 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-close],but
   if('favf' in ds){ui.fav=!ui.fav;render();return}
   if(ds.week){ui.week=ds.week==='0'?0:ui.week+Number(ds.week);drawList();return}
   if(ds.day){planPick(ds.day,ds.moment);return}
+  if('wsheet' in ds){weekSheet();return}
+  if('wpaste' in ds&&clip){writeWeek(ui.week,clip,'Semaine collée');return}
   if('starter' in ds){starter();return}});
 render();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
