@@ -297,7 +297,7 @@ function migrate(){if((S.mig||0)>=16||!S.aliments.length)return false;S.mig=S.mi
 
 /* ---------- sheets & toast ---------- */
 const L1=$('#layer1'),L2=$('#layer2'),S1=$('#sheet1'),S2=$('#sheet2');
-function openSheet(html,mount,lvl=1){const L=lvl===2?L2:L1,el=lvl===2?S2:S1;if(lvl===1&&!L2.hidden)closeSheet(2);el.onclick=null;el.innerHTML=html;L.hidden=false;document.body.classList.add('lock');el.scrollTop=0;mount&&mount(el)}
+function openSheet(html,mount,lvl=1){const L=lvl===2?L2:L1,el=lvl===2?S2:S1;if(lvl===1&&!L2.hidden)closeSheet(2);el.onclick=null;el.innerHTML=html;L.hidden=false;document.body.classList.add('lock');el.scrollTop=0;mount&&mount(el);const sq=el.querySelector('input[type=search]:not(#aq)');if(sq)try{sq.focus({preventScroll:true})}catch(e){}}
 function closeSheet(lvl){(lvl===2?L2:L1).hidden=true;if(lvl===1)L2.hidden=true;if(L1.hidden&&L2.hidden)document.body.classList.remove('lock')}
 const closeTop=()=>closeSheet(L2.hidden?1:2);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!(L1.hidden&&L2.hidden))closeTop()});
