@@ -238,7 +238,7 @@ function loginSheet(msg){openSheet(`<h2>Connexion</h2><p class="muted" style="ma
 
 
 /* ---------- mise à jour des aliments (audit du 26/11) ---------- */
-function migrate(){if((S.mig||0)>=12||!S.aliments.length)return false;S.mig=S.mig||0;
+function migrate(){if((S.mig||0)>=13||!S.aliments.length)return false;S.mig=S.mig||0;
   if(S.mig<2){
   const find=n=>S.aliments.find(a=>norm(a.name)===norm(n));
   const setType=(n,t)=>{const a=find(n);if(a)a.type=t};
@@ -285,6 +285,9 @@ function migrate(){if((S.mig||0)>=12||!S.aliments.length)return false;S.mig=S.mi
     S.mig=10}
   if(S.mig<11){for(const a of S.aliments)if(/^jambon/.test(norm(a.name)))a.shop='Bio c’ Bon';S.mig=11}
   if(S.mig<12){for(const a of S.aliments)if(/^(riz|compote|lentille)/.test(norm(a.name)))a.shop='Bio c’ Bon';S.mig=12}
+  if(S.mig<13){const fa=(n,t)=>{let a=S.aliments.find(x=>norm(x.name)===norm(n));if(!a){a={id:uid(),name:n,type:t};S.aliments.push(a)}return a.id};
+    for(const [n,als] of [['Galettes épinard pignon',[['Épinards','legume']]],['Galettes de pois chiche',[['Pois chiches','legumineuse']]],['Rollinis ricotta épinard',[['Ricotta','laitage'],['Épinards','legume']]]])if(!S.plats.some(x=>norm(x.name)===norm(n)))S.plats.push({id:uid(),name:n,description:'',alimentIds:als.map(([a,t])=>fa(a,t)),cat:'',origin:'toutfait',shop:'Bio c’ Bon',moment:'',fav:false,members:[],qty:{}});
+    S.mig=13}
   return true}
 
 /* ---------- sheets & toast ---------- */
@@ -328,6 +331,7 @@ function platForm(id,preset){const p=id?P(id):null;const d={al:new Set(p?p.alime
   const inRepas=id?S.repas.filter(r=>Object.values(r.slots).some(s=>s&&s.k==='p'&&s.id===id)).length:0;
   openSheet(`<h2>${p?'Modifier le plat':'Nouveau plat'}</h2><form id="f" novalidate>
   <label>Nom<input id="fn" value="${esc(pname)}" autocomplete="off" placeholder="ex. Poulet rôti"></label>
+  <fieldset><legend>Quantités par adulte <span class="muted">(un enfant compte pour une demi-portion)</span></legend><div id="qtys"></div></fieldset>
   <fieldset><legend>Catégorie</legend><div class="seg" id="ori"></div></fieldset>
   <fieldset><legend>Magasin <span class="muted">(optionnel)</span></legend><div id="pshop"></div></fieldset>
   <fieldset><legend>Plutôt pour</legend><div class="seg" id="mom"></div></fieldset>
@@ -335,11 +339,10 @@ function platForm(id,preset){const p=id?P(id):null;const d={al:new Set(p?p.alime
   <fieldset><legend>Type de plat</legend><div class="togs" id="cats"></div>
   <div class="addtype"><input id="nc" placeholder="Autre type (ex. Wok)" autocomplete="off" aria-label="Nouveau type de plat"><button type="button" class="ghost" id="ncb">Ajouter</button></div></fieldset>
   <label>Description<textarea id="fdsc" rows="3" placeholder="Comment tu le prépares, avec quoi…">${esc(p?.description||'')}</textarea></label>
-  <fieldset><legend>Aliments <span id="fcount" class="muted"></span></legend>
+  <label style="display:flex;gap:10px;align-items:center;margin-top:18px"><input type="checkbox" id="ffav" ${d.fav?'checked':''} style="width:24px;min-height:24px;margin:0;accent-color:var(--star)"> ★ Plat favori</label>
+  <fieldset><legend>Choisir les aliments <span id="fcount" class="muted"></span></legend>
   <input type="search" id="aq" placeholder="Chercher ou créer un aliment" autocomplete="off" aria-label="Chercher un aliment">
   <div id="alc" class="togs" style="margin-top:10px"></div></fieldset>
-  <fieldset><legend>Quantités par adulte <span class="muted">(un enfant compte pour une demi-portion)</span></legend><div id="qtys"></div></fieldset>
-  <label style="display:flex;gap:10px;align-items:center;margin-top:18px"><input type="checkbox" id="ffav" ${d.fav?'checked':''} style="width:24px;min-height:24px;margin:0;accent-color:var(--star)"> ★ Plat favori</label>
   ${inRepas?`<p class="muted">Utilisé dans ${inRepas} repas.</p>`:''}
   <p class="err" id="fe" role="alert"></p>
   <div class="actions">${p?'<button type="button" class="danger" id="fd">Supprimer</button>':''}<button type="button" class="ghost" data-close>Annuler</button><button class="primary">Enregistrer</button></div></form>`,root=>{
@@ -352,7 +355,7 @@ function platForm(id,preset){const p=id?P(id):null;const d={al:new Set(p?p.alime
       root.querySelector('#alc').innerHTML=h||'<p class="muted" style="margin:0">Tape un nom pour créer ton premier aliment.</p>';
       root.querySelector('#fcount').textContent=d.al.size?`· ${d.al.size} choisi${d.al.size>1?'s':''}`:'';
       const qb=root.querySelector('#qtys');qb.querySelectorAll('[data-qn]').forEach(i=>{const q=readQty(qb,i.dataset.qn);if(q)d.qty[i.dataset.qn]=q;else delete d.qty[i.dataset.qn]});
-      const sel=byName([...d.al].map(A).filter(Boolean));qb.innerHTML=sel.length?sel.map(a=>`<div class="qrow"><span class="chip t-${a.type}"><span class="dot"></span>${esc(a.name)}</span>${qtyInput(a.id,d.qty[a.id])}</div>`).join(''):'<p class="muted" style="margin:0">Choisis d’abord les aliments.</p>'};
+      const sel=byName([...d.al].map(A).filter(Boolean));qb.innerHTML=sel.length?sel.map(a=>`<div class="qrow"><span class="chip t-${a.type}"><span class="dot"></span>${esc(a.name)}</span>${qtyInput(a.id,d.qty[a.id])}</div>`).join(''):'<p class="muted" style="margin:0">Choisis les aliments en bas de la fiche.</p>'};
     const drawOri=()=>{root.querySelector('#ori').innerHTML=ORIG.map(([k,l])=>`<button type="button" class="tog" data-ori="${k}" aria-pressed="${d.origin===k}">${l}</button>`).join('')};
     const drawMom=()=>{root.querySelector('#mom').innerHTML=MOM.map(([k,l])=>`<button type="button" class="tog" data-mom="${k}" aria-pressed="${d.moment===k}">${l}</button>`).join('')};
     const drawMem=()=>{root.querySelector('#pmem').innerHTML=memToggles(d.mem)};
