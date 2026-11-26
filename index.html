@@ -628,6 +628,12 @@ function menuSheet(){const json=JSON.stringify(S);
     const li=root.querySelector('#li');if(li)li.onclick=()=>loginSheet()})}
 
 /* ---------- views ---------- */
+// Dans un créneau : regroupe par personnes (restes d'abord) et n'affiche l'étiquette qu'une fois par groupe.
+function slotItems(rs,lo){const groups=new Map();const g=t=>{if(!groups.has(t))groups.set(t,{lo:[],rs:[]});return groups.get(t)};
+  rs.forEach(e=>g(forTxt(entryMembers(e))).rs.push(e));lo.forEach(x=>g(forTxt(x.members)).lo.push(x));
+  return [...groups].map(([t,v])=>{let first=true;const tag=()=>{const h=first?tagHtml(t):'';first=false;return h};
+    return v.lo.map(x=>`<span class="mbody"><strong><span class="reste">Reste</span> ${esc(resteName(x))}${tag()}</strong><span class="muted">préparé ${esc(slotLabel(x.from.k,x.from.m))}</span></span>`).join('')+
+      v.rs.map(e=>mainSlot(e)?`<span class="mbody"><strong>${esc(entryName(e))}${tag()}</strong>${entryRest(e)?`<span class="muted">${esc(entryRest(e))}</span>`:''}</span>`:`<span class="mbody"><span class="muted">${esc(entryRest(e))}${tag()}</span></span>`).join('')}).join('')}
 const ui={mem:'',who:'',q:{},tf:'',al:'',cat:'',ori:'',mom:'',fav:false,week:0};
 const search=(ph)=>`<input type="search" id="q" placeholder="${ph}" value="${esc(ui.q[route]||'')}" autocomplete="off" aria-label="${ph}">`;
 const V={
@@ -637,7 +643,7 @@ planning:{title:'Planning',sub:()=>'Midi et soir, semaine par semaine',shell:()=
   const f=d=>d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
   return `<div class="weeknav"><button type="button" data-week="-1" aria-label="Semaine précédente">‹</button><div><strong>Du ${f(days[0])} au ${f(days[6])}</strong>${ui.week?'<button type="button" class="link" data-week="0">Revenir à cette semaine</button>':'<span class="muted">Cette semaine</span>'}</div><button type="button" data-week="1" aria-label="Semaine suivante">›</button></div><div class="weektools"><button type="button" class="primary" data-courses>Liste de courses</button><button type="button" class="ghost" data-wsheet>Modèles et copier / coller</button>${clip?'<button type="button" class="ghost" data-wpaste>Coller la semaine copiée</button>':''}</div>`+
   days.map(d=>{const k=keyOf(d);return `<section class="day${k===tk?' today':''}"><h3>${d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}${k===tk?' <span class="muted">· aujourd’hui</span>':''}</h3>${MOMENTS.map(([m,ml])=>{const rs=slotEntries(k,m),lo=restesTo(k,m);
-    return `<button type="button" class="meal" data-day="${k}" data-moment="${m}"><span class="mlabel">${ml}</span>${rs.length||lo.length?`<span class="mlist">${rs.map(e=>mainSlot(e)?`<span class="mbody"><strong>${esc(entryName(e))}${tagHtml(forTxt(entryMembers(e)))}</strong>${entryRest(e)?`<span class="muted">${esc(entryRest(e))}</span>`:''}</span>`:`<span class="mbody"><span class="muted">${esc(entryRest(e))}${tagHtml(forTxt(entryMembers(e)))}</span></span>`).join('')}${lo.map(x=>`<span class="mbody"><strong><span class="reste">Reste</span> ${esc(resteName(x))}${tagHtml(forTxt(x.members))}</strong><span class="muted">préparé ${esc(slotLabel(x.from.k,x.from.m))}</span></span>`).join('')}</span>`:'<span class="mbody muted">+ Choisir un repas</span>'}</button>`}).join('')}</section>`}).join('')}},
+    return `<button type="button" class="meal" data-day="${k}" data-moment="${m}"><span class="mlabel">${ml}</span>${rs.length||lo.length?`<span class="mlist">${slotItems(rs,lo)}</span>`:'<span class="mbody muted">+ Choisir un repas</span>'}</button>`}).join('')}</section>`}).join('')}},
 repas:{title:'Repas complets',sub:()=>`${S.repas.length} repas enregistrés · à placer puis ajuster dans le planning`,shell:()=>`<div class="tools">${search('Chercher un repas')}<div class="filters"></div></div><div id="list"></div>`,list:()=>{
   if(!S.repas.length)return `<div class="empty"><p>Compose ton premier repas complet en piochant dans tes aliments et tes plats.</p><button type="button" class="primary" data-add>Créer un repas</button></div>`;
   const q=norm(ui.q.repas);const arr=byName(S.repas).filter(r=>(!q||norm(r.name+' '+summary(r)).includes(q)));
