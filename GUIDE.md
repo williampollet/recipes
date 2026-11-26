@@ -1,4 +1,4 @@
-# Mettre l'app en ligne pour toi et ta conjointe
+# Kitchen Planner : mise en ligne pour toi et ta conjointe
 
 Il faut environ 10 minutes. Tout est gratuit.
 

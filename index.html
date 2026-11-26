@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Mes plats et repas</title>
+<title>Kitchen Planner</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Repas">
+<meta name="apple-mobile-web-app-title" content="Kitchen Planner">
 <meta name="theme-color" content="#2f8f55">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
@@ -31,6 +31,7 @@ header>div{max-width:760px;margin:0 auto}
 header h1{margin:0;font-size:clamp(32px,9vw,46px);line-height:1.05;font-weight:700;text-wrap:balance}
 header p{margin:6px 0 0;font-size:15px}
 .menu{float:right;width:46px;height:46px;margin:-4px -6px 0 8px;border-radius:50%;border:0;background:color-mix(in srgb,var(--bandink) 12%,transparent);color:var(--bandink);font-size:24px;line-height:1}
+.brand{margin:0 0 2px;font-size:14px;font-weight:500;opacity:.85}
 .status{font-size:13px;opacity:.85}
 main{padding:16px max(5vw,16px);max-width:792px;margin:0 auto}
 input,textarea,select{font:inherit;font-size:16px;width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);min-height:46px}
@@ -122,7 +123,7 @@ nav svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;st
 </style>
 </head>
 <body>
-<header><div><button id="menu" class="menu" type="button" aria-label="Données et compte">⋯</button><h1 id="title">Planning</h1><p id="sub"></p><p id="status" class="status"></p></div></header>
+<header><div><button id="menu" class="menu" type="button" aria-label="Données et compte">⋯</button><p class="brand">Kitchen Planner</p><h1 id="title">Planning</h1><p id="sub"></p><p id="status" class="status"></p></div></header>
 <main id="main"></main>
 <button class="fab" id="fab" data-add type="button">+ Ajouter</button>
 <nav class="tabs" aria-label="Pages">
@@ -592,7 +593,7 @@ aliments:{title:'Aliments',sub:()=>`${S.aliments.length} aliments`,shell:()=>`<d
   return h||'<p class="muted">Aucun aliment ne correspond.</p>'}}};
 let route=location.hash.slice(1);if(!V[route])route='planning';
 function drawList(){const el=$('#list');if(el)el.innerHTML=V[route].list()}
-function render(){const v=V[route];$('#title').textContent=v.title;$('#sub').textContent=v.sub();document.title=v.title+' · Mes repas';
+function render(){const v=V[route];$('#title').textContent=v.title;$('#sub').textContent=v.sub();document.title=v.title+' · Kitchen Planner';
   document.querySelectorAll('nav.tabs a').forEach(a=>a.dataset.r===route?a.setAttribute('aria-current','page'):a.removeAttribute('aria-current'));
   $('#fab').hidden=route==='planning';$('#main').innerHTML=v.shell();drawList()}
 window.addEventListener('hashchange',()=>{ui.mem='';const r=location.hash.slice(1);route=V[r]?r:'planning';closeSheet(1);render();window.scrollTo(0,0)});
