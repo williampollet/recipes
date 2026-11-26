@@ -294,6 +294,7 @@ function migrate(){if((S.mig||0)>=16||!S.aliments.length)return false;S.mig=S.mi
   if(S.mig<15){for(const n of ['Sel','Poivre','Ail','Curry','Cumin','Paprika','Curcuma','Gingembre','Cannelle','Muscade','Herbes de Provence','Thym','Laurier','Persil','Ciboulette','Basilic','Huile d’olive','Vinaigre','Moutarde','Sauce soja'])if(!S.aliments.some(x=>norm(x.name)===norm(n)))S.aliments.push({id:uid(),name:n,type:'epice'});else{const a=S.aliments.find(x=>norm(x.name)===norm(n));if(a.type==='legume'&&/^(ail|persil|ciboulette|basilic)$/.test(norm(n)))a.type='epice'}S.mig=15}
   if(S.mig<16){for(const a of S.aliments)if(a.type==='epice')a.shop='Bio c’ Bon';S.mig=16}
   if(S.mig<17){if(!S.plats.some(x=>norm(x.name)==='poisson pane')){let a=S.aliments.find(x=>norm(x.name)==='poisson');if(!a){a={id:uid(),name:'Poisson',type:'proteine'};S.aliments.push(a)}S.plats.push({id:uid(),name:'Poisson pané',description:'',alimentIds:[a.id],cat:'',origin:'toutfait',shop:'Picard',moment:'',fav:false,members:[],qty:{}})}S.mig=17}
+  if(S.mig<18){const c=S.aliments.find(x=>norm(x.name)==='concasse de tomates');if(c)c.shop='Bio c’ Bon';else S.aliments.push({id:uid(),name:'Concassé de tomates',type:'legume',shop:'Bio c’ Bon'});S.mig=18}
   return true}
 
 /* ---------- sheets & toast ---------- */
