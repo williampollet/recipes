@@ -240,7 +240,7 @@ function loginSheet(msg){openSheet(`<h2>Connexion</h2><p class="muted" style="ma
 
 
 /* ---------- mise à jour des aliments (audit du 26/11) ---------- */
-function migrate(){if((S.mig||0)>=15||!S.aliments.length)return false;S.mig=S.mig||0;
+function migrate(){if((S.mig||0)>=16||!S.aliments.length)return false;S.mig=S.mig||0;
   if(S.mig<2){
   const find=n=>S.aliments.find(a=>norm(a.name)===norm(n));
   const setType=(n,t)=>{const a=find(n);if(a)a.type=t};
@@ -292,6 +292,7 @@ function migrate(){if((S.mig||0)>=15||!S.aliments.length)return false;S.mig=S.mi
     S.mig=13}
   if(S.mig<14){const o=S.aliments.find(x=>norm(x.name)==='oignon');if(o){o.shop=o.shop||'Marché'}else S.aliments.push({id:uid(),name:'Oignon',type:'legume',shop:'Marché'});S.mig=14}
   if(S.mig<15){for(const n of ['Sel','Poivre','Ail','Curry','Cumin','Paprika','Curcuma','Gingembre','Cannelle','Muscade','Herbes de Provence','Thym','Laurier','Persil','Ciboulette','Basilic','Huile d’olive','Vinaigre','Moutarde','Sauce soja'])if(!S.aliments.some(x=>norm(x.name)===norm(n)))S.aliments.push({id:uid(),name:n,type:'epice'});else{const a=S.aliments.find(x=>norm(x.name)===norm(n));if(a.type==='legume'&&/^(ail|persil|ciboulette|basilic)$/.test(norm(n)))a.type='epice'}S.mig=15}
+  if(S.mig<16){for(const a of S.aliments)if(a.type==='epice')a.shop='Bio c’ Bon';S.mig=16}
   return true}
 
 /* ---------- sheets & toast ---------- */
