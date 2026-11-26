@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Repas">
-<meta name="theme-color" content="#f4b400">
+<meta name="theme-color" content="#2f8f55">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -19,8 +19,8 @@
    PICTURE: the working lists themselves (aliments by colour, plats, repas, the week).
    COLOUR and TYPE: saffron band, warm white ground, tomato accent; five food colours; Rubik.
    LAYOUT: one column up to 760px, bottom tab bar, sheets that slide up for every form. */
-:root{color-scheme:light dark;--bg:light-dark(#fbfaf6,#141311);--ink:light-dark(#1f1c17,#f2efe9);--mute:light-dark(#6d675c,#a8a296);--card:light-dark(#ffffff,#201e1a);--line:light-dark(#e6e0d4,#36322c);--band:light-dark(#f4b400,#2a2310);--bandink:light-dark(#1f1c17,#f6c744);--acc:light-dark(#d1351e,#ff6b55);--legume:#3d9a4a;--feculent:#c08a1c;--fruit:#ec7420;--laitage:#3f7fc4;--proteine:#c43c3c;--legumineuse:#8a5a2b;--star:#f0a800}
-:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+:root{color-scheme:light;--bg:#f4f8f2;--ink:#17261c;--mute:#5f6f63;--card:#ffffff;--line:#dbe6d9;--band:#2f8f55;--bandink:#ffffff;--acc:#1f7a44;--danger:#c8372d;--legume:#3d9a4a;--feculent:#c08a1c;--fruit:#ec7420;--laitage:#3f7fc4;--proteine:#c43c3c;--legumineuse:#8a5a2b;--star:#f0a800}
+:root[data-theme]{color-scheme:light}
 *{box-sizing:border-box;min-width:0}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Rubik,system-ui,sans-serif;overflow-x:clip;padding-bottom:calc(150px + env(safe-area-inset-bottom))}
 body.lock{overflow:hidden}
@@ -78,8 +78,8 @@ h2{font-size:24px;line-height:1.15;margin:0 0 4px}h3{font-size:17px;margin:20px 
 .empty p{margin:0 0 14px}
 .primary{background:var(--acc);color:#fff;border:0;border-radius:12px;padding:0 20px;min-height:46px;font-weight:500}
 .ghost{background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:0 16px;min-height:46px}
-.danger{background:transparent;color:var(--acc);border:1.5px solid currentColor;border-radius:12px;padding:0 14px;min-height:46px}
-.err{color:var(--acc);margin:8px 0 0;min-height:1em;font-size:15px}
+.danger{background:transparent;color:var(--danger);border:1.5px solid currentColor;border-radius:12px;padding:0 14px;min-height:46px}
+.err{color:var(--danger);margin:8px 0 0;min-height:1em;font-size:15px}
 .fab{position:fixed;right:max(5vw,16px);bottom:calc(76px + env(safe-area-inset-bottom));z-index:6;background:var(--acc);color:#fff;border:0;border-radius:999px;min-height:56px;padding:0 22px;font-weight:500;font-size:17px;box-shadow:0 6px 18px rgb(0 0 0/.22)}
 .fab[hidden]{display:none}
 nav.tabs{position:fixed;inset:auto 0 0 0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:7}
@@ -105,8 +105,8 @@ nav svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;st
 .idea[disabled]{border-style:solid;border-color:var(--line);color:var(--mute);cursor:default}
 .addtype{display:flex;gap:8px;margin-top:10px}.addtype input{flex:1}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(150px + env(safe-area-inset-bottom));z-index:30;background:var(--ink);color:var(--bg);border-radius:12px;padding:8px 8px 8px 16px;display:flex;gap:10px;align-items:center;max-width:calc(100vw - 32px);box-shadow:0 6px 18px rgb(0 0 0/.25)}
-#toast[hidden]{display:none}#toast button{background:transparent;border:0;color:var(--band);font-weight:700;min-height:40px;padding:0 10px}
-.ideabox{margin:14px 0 4px;padding:14px;border-radius:14px;background:color-mix(in srgb,var(--band) 16%,var(--card));border:1px solid var(--line)}
+#toast[hidden]{display:none}#toast button{background:transparent;border:0;color:#9be3b4;font-weight:700;min-height:40px;padding:0 10px}
+.ideabox{margin:14px 0 4px;padding:14px;border-radius:14px;background:#eaf5ec;border:1px solid var(--line)}
 .ideabox h3{margin:0 0 4px}
 </style>
 </head>
@@ -401,6 +401,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-close],but
   if(ds.day){planPick(ds.day,ds.moment);return}
   if('starter' in ds){starter();return}});
 render();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
 </script>
 </body>
