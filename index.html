@@ -71,6 +71,11 @@ h2{font-size:24px;line-height:1.15;margin:0 0 4px}h3{font-size:17px;margin:20px 
 .who{font-size:12px;font-weight:500;color:#fff;background:#7b5cc4;border-radius:6px;padding:1px 7px;vertical-align:2px;margin-left:6px;white-space:nowrap}
 .cklist{list-style:none;margin:0;padding:0;display:grid;gap:6px}.cklist li{display:flex;gap:8px}
 .ck{flex:1;display:flex;align-items:center;gap:12px;min-height:48px;padding:6px 14px;background:var(--card);border:1px solid var(--line);border-radius:12px;font-weight:400;margin:0;cursor:pointer}.ck input{width:22px;height:22px;min-height:0;margin:0;accent-color:var(--acc);flex:none}.ck span:first-of-type{flex:1}.ck.done span:first-of-type{text-decoration:line-through;color:var(--mute)}
+.qty{display:inline-flex;gap:6px}.qty input{width:90px}.qty select{width:auto}
+.qrow{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid var(--line)}
+.amt{font-weight:500;white-space:nowrap}
+.resterow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}.chipx{border:0;background:transparent;font-size:18px;line-height:1;padding:0 2px;min-height:28px}
+.reste{font-size:12px;font-weight:500;color:#fff;background:#c08a1c;border-radius:6px;padding:1px 7px;vertical-align:2px;margin-right:4px}
 .weektools{display:flex;flex-wrap:wrap;gap:8px;margin:-2px 0 12px}.weektools button{flex:1 1 160px}
 .day{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 12px 4px;margin-bottom:10px}
 .day.today{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
@@ -142,6 +147,10 @@ const M=id=>S.members.find(m=>m.id===id);
 const forTxt=list=>{const ms=(list||[]).map(M).filter(Boolean);return ms.length&&(ms.length<S.members.length||S.members.length===1)?ms.map(m=>m.name).join(', '):''};
 const tagHtml=t=>t?` <span class="who">${esc(t)}</span>`:'';
 const whoTag=r=>tagHtml(forTxt(r.members)||(!(r.members||[]).length&&r.who==='enfant'?'Enfant':''));
+const portions=list=>{const ms=(list||[]).map(M).filter(Boolean);const all=ms.length?ms:S.members;return all.length?all.reduce((n,m)=>n+(m.kind==='enfant'?.5:1),0):1};
+const fmtQ=(n,u)=>{if(u==='g'&&n>=1000)return (Math.round(n/100)/10).toLocaleString('fr-FR')+' kg';if(u==='ml'&&n>=1000)return (Math.round(n/100)/10).toLocaleString('fr-FR')+' l';const v=u==='g'||u==='ml'?Math.round(n):Math.ceil(n*2)/2;return v.toLocaleString('fr-FR')+' '+(u==='pièce'&&v>1?'pièces':u==='tranche'&&v>1?'tranches':u)};
+const qtyInput=(key,q)=>`<span class="qty"><input type="number" inputmode="decimal" min="0" step="any" data-qn="${esc(key)}" value="${q?q.n:''}" placeholder="—" aria-label="Quantité"><select data-qu="${esc(key)}" aria-label="Unité">${UNITS.map(u=>`<option${q&&q.u===u?' selected':''}>${u}</option>`).join('')}</select></span>`;
+const readQty=(root,key)=>{const n=root.querySelector(`[data-qn="${key}"]`),u=root.querySelector(`[data-qu="${key}"]`);return n&&u?qOk({n:parseFloat(String(n.value).replace(',','.')),u:u.value}):undefined};
 const forMember=(x,id)=>!(x.members||[]).filter(M).length||x.members.includes(id);
 const memToggles=set=>S.members.length?`<div class="seg">${S.members.map(m=>`<button type="button" class="tog" data-mem="${esc(m.id)}" aria-pressed="${set.has(m.id)}">${esc(m.name)} <span class="muted">${m.kind==='enfant'?'enfant':'adulte'}</span></button>`).join('')}</div><p class="muted" style="margin:6px 0 0;font-size:14px">Personne de coché = toute la famille.</p>`:'<p class="muted" style="margin:0">Déclare ta famille avec le menu ⋯ en haut à droite pour choisir qui mange quoi.</p>';
 const MOMENTS=[['midi','Midi'],['soir','Soir']];
@@ -153,13 +162,17 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
 const byName=arr=>[...arr].sort((a,b)=>String(a.name).localeCompare(String(b.name),'fr'));
-const empty=()=>({v:1,aliments:[],plats:[],repas:[],planning:{},cats:[],weeks:[],members:[],courses:{}});
-function clean(d){const s=empty();if(d&&typeof d==='object'){for(const k of['aliments','plats','repas','cats','weeks','members'])if(Array.isArray(d[k]))s[k]=d[k].filter(x=>x&&typeof x.id==='string');if(d.planning&&typeof d.planning==='object'&&!Array.isArray(d.planning))s.planning=d.planning}
-  s.aliments=s.aliments.map(a=>({id:a.id,name:String(a.name||''),type:TL[a.type]?a.type:'legume'}));
-  s.plats=s.plats.map(p=>({id:p.id,name:String(p.name||''),description:String(p.description||''),alimentIds:Array.isArray(p.alimentIds)?p.alimentIds.filter(x=>typeof x==='string'):[],cat:typeof p.cat==='string'?p.cat:'',origin:['maison','toutfait'].includes(p.origin)?p.origin:'',moment:ML[p.moment]?p.moment:'',fav:!!p.fav}));
+const UNITS=['g','ml','pièce','tranche','c. à s.'];
+const qOk=q=>q&&typeof q==='object'&&Number(q.n)>0&&UNITS.includes(q.u)?{n:Number(q.n),u:q.u}:undefined;
+const empty=()=>({v:1,aliments:[],plats:[],repas:[],planning:{},cats:[],weeks:[],members:[],courses:{},restes:[]});
+function clean(d){const s=empty();if(d&&typeof d==='object'){for(const k of['aliments','plats','repas','cats','weeks','members','restes'])if(Array.isArray(d[k]))s[k]=d[k].filter(x=>x&&typeof x.id==='string');if(d.planning&&typeof d.planning==='object'&&!Array.isArray(d.planning))s.planning=d.planning}
+  s.aliments=s.aliments.map(a=>({id:a.id,name:String(a.name||''),type:TL[a.type]?a.type:'legume',qty:qOk(a.qty)}));
+  s.plats=s.plats.map(p=>({id:p.id,name:String(p.name||''),description:String(p.description||''),alimentIds:Array.isArray(p.alimentIds)?p.alimentIds.filter(x=>typeof x==='string'):[],cat:typeof p.cat==='string'?p.cat:'',origin:['maison','toutfait'].includes(p.origin)?p.origin:'',moment:ML[p.moment]?p.moment:'',fav:!!p.fav,qty:Object.fromEntries(Object.entries(p.qty&&typeof p.qty==='object'?p.qty:{}).map(([k,v])=>[k,qOk(v)]).filter(([k,v])=>v))}));
   s.repas=s.repas.map(r=>({id:r.id,name:String(r.name||''),who:r.who==='enfant'?'enfant':'commun',slots:r.slots&&typeof r.slots==='object'?r.slots:{}}));
   s.weeks=s.weeks.map(w=>({id:w.id,name:String(w.name||'Semaine'),days:Array.isArray(w.days)?w.days.slice(0,7).map(d=>d&&typeof d==='object'?{midi:typeof d.midi==='string'?d.midi:undefined,soir:typeof d.soir==='string'?d.soir:undefined}:{}):[]}));
   s.mig=Number(d&&d.mig)||0;
+  const slotOk=x=>x&&typeof x.k==='string'&&(x.m==='midi'||x.m==='soir');
+  s.restes=s.restes.filter(x=>typeof x.rid==='string'&&slotOk(x.from)&&slotOk(x.to)).map(x=>({id:x.id,rid:x.rid,from:{k:x.from.k,m:x.from.m},to:{k:x.to.k,m:x.to.m},members:Array.isArray(x.members)?x.members.filter(i=>typeof i==='string'):[]}));
   const ids=v=>Array.isArray(v)?v.filter(x=>typeof x==='string'):[];
   s.members=s.members.map(m=>({id:m.id,name:String(m.name||''),kind:m.kind==='enfant'?'enfant':'adulte'}));
   const mm=k=>new Map(((d&&Array.isArray(d[k]))?d[k]:[]).filter(x=>x&&typeof x==='object').map(x=>[x.id,x.members]));const pm=mm('plats'),rm=mm('repas');s.plats.forEach(x=>x.members=ids(pm.get(x.id)));s.repas.forEach(x=>x.members=ids(rm.get(x.id)));
@@ -268,6 +281,7 @@ function alimentForm(id,preset){const a=id?A(id):null;let type=a?.type||preset?.
   openSheet(`<h2>${a?esc(a.name):'Nouvel aliment'}</h2><form id="f" novalidate>
   <label>Nom<input id="fn" value="${esc(a?.name||preset?.name||'')}" autocomplete="off" placeholder="ex. Courgette"></label>
   <fieldset><legend>Type</legend><div class="seg" id="seg">${TYPES.map(([k,l])=>`<button type="button" class="tog t-${k}" data-type="${k}" aria-pressed="${k===type}"><span class="dot"></span>${l}</button>`).join('')}</div></fieldset>
+  <fieldset><legend>Portion par adulte <span class="muted">(quand il est servi seul dans un repas)</span></legend>${qtyInput('self',a?.qty)}</fieldset>
   ${a?`<h3>Plats avec ${esc(a.name)} <span class="muted">${used.length}</span></h3>${used.length?`<ul class="list">${used.map(p=>`<li><button type="button" class="row" data-open-plat="${esc(p.id)}"><span class="rmain"><strong>${p.fav?'★ ':''}${esc(p.name)}</strong></span>${C(p.cat)?`<span class="cat">${esc(C(p.cat).label)}</span>`:''}</button></li>`).join('')}</ul>`:'<p class="muted">Aucun plat pour l’instant.</p>'}
   <div class="ideabox"><h3>Idées de plats</h3><p class="muted" style="margin:0">${esc(a.name)} croisé avec chaque type de plat. Touche une idée pour la créer.</p><div class="ideas">${ideasFor(a)}</div></div>`:''}
   <p class="err" id="fe" role="alert"></p>
@@ -279,13 +293,13 @@ function alimentForm(id,preset){const a=id?A(id):null;let type=a?.type||preset?.
     root.querySelector('#f').onsubmit=e=>{e.preventDefault();const name=root.querySelector('#fn').value.trim();const fe=root.querySelector('#fe');
       if(!name){fe.textContent='Donne un nom à l’aliment.';return}
       if(S.aliments.some(x=>x.id!==id&&norm(x.name)===norm(name))){fe.textContent='Cet aliment existe déjà.';return}
-      const cur=id&&A(id);if(cur)Object.assign(cur,{name,type});else S.aliments.push({id:uid(),name,type});
+      const qty=readQty(root,'self');const cur=id&&A(id);if(cur)Object.assign(cur,{name,type,qty});else S.aliments.push({id:uid(),name,type,qty});
       persist();closeSheet(1);render();toast(cur?'Aliment modifié':'Aliment ajouté')}})}
 function ideasFor(a){return allCats().map(c=>{const ex=S.plats.find(p=>p.cat===c.id&&p.alimentIds.includes(a.id));
   return ex?`<button type="button" class="idea" disabled title="Existe déjà">✓ ${esc(ex.name)}</button>`:`<button type="button" class="idea" data-idea="${esc(c.id)}">+ ${esc(ideaName(c,a))}</button>`}).join('')}
 
 /* ---------- plat form ---------- */
-function platForm(id,preset){const p=id?P(id):null;const d={al:new Set(p?p.alimentIds:preset?.al?[preset.al]:[]),cat:p?p.cat:preset?.cat||'',origin:p?p.origin:'',moment:p?p.moment:'',fav:p?p.fav:false,mem:new Set(p?.members||[])};let armed=false;
+function platForm(id,preset){const p=id?P(id):null;const d={al:new Set(p?p.alimentIds:preset?.al?[preset.al]:[]),cat:p?p.cat:preset?.cat||'',origin:p?p.origin:'',moment:p?p.moment:'',fav:p?p.fav:false,mem:new Set(p?.members||[]),qty:{...(p?.qty||{})}};let armed=false;
   const pa=preset?.al&&A(preset.al),pc=preset?.cat&&C(preset.cat);const pname=p?p.name:(pa&&pc?ideaName(pc,pa):'');
   const inRepas=id?S.repas.filter(r=>Object.values(r.slots).some(s=>s&&s.k==='p'&&s.id===id)).length:0;
   openSheet(`<h2>${p?'Modifier le plat':'Nouveau plat'}</h2><form id="f" novalidate>
@@ -299,6 +313,7 @@ function platForm(id,preset){const p=id?P(id):null;const d={al:new Set(p?p.alime
   <fieldset><legend>Aliments <span id="fcount" class="muted"></span></legend>
   <input type="search" id="aq" placeholder="Chercher ou créer un aliment" autocomplete="off" aria-label="Chercher un aliment">
   <div id="alc" class="togs" style="margin-top:10px"></div></fieldset>
+  <fieldset><legend>Quantités par adulte <span class="muted">(un enfant compte pour une demi-portion)</span></legend><div id="qtys"></div></fieldset>
   <label style="display:flex;gap:10px;align-items:center;margin-top:18px"><input type="checkbox" id="ffav" ${d.fav?'checked':''} style="width:24px;min-height:24px;margin:0;accent-color:var(--star)"> ★ Plat favori</label>
   ${inRepas?`<p class="muted">Utilisé dans ${inRepas} repas.</p>`:''}
   <p class="err" id="fe" role="alert"></p>
@@ -310,7 +325,9 @@ function platForm(id,preset){const p=id?P(id):null;const d={al:new Set(p?p.alime
       let h=list.map(a=>`<button type="button" class="tog t-${a.type}" data-al="${esc(a.id)}" aria-pressed="${d.al.has(a.id)}"><span class="dot"></span>${esc(a.name)}</button>`).join('');
       if(raw&&!S.aliments.some(a=>norm(a.name)===k))h+=`<div class="create" style="width:100%"><p>Créer « ${esc(raw)} » comme :</p><div class="seg">${TYPES.map(([t,l])=>`<button type="button" class="tog t-${t}" data-mk="${t}"><span class="dot"></span>${l}</button>`).join('')}</div></div>`;
       root.querySelector('#alc').innerHTML=h||'<p class="muted" style="margin:0">Tape un nom pour créer ton premier aliment.</p>';
-      root.querySelector('#fcount').textContent=d.al.size?`· ${d.al.size} choisi${d.al.size>1?'s':''}`:''};
+      root.querySelector('#fcount').textContent=d.al.size?`· ${d.al.size} choisi${d.al.size>1?'s':''}`:'';
+      const qb=root.querySelector('#qtys');qb.querySelectorAll('[data-qn]').forEach(i=>{const q=readQty(qb,i.dataset.qn);if(q)d.qty[i.dataset.qn]=q;else delete d.qty[i.dataset.qn]});
+      const sel=byName([...d.al].map(A).filter(Boolean));qb.innerHTML=sel.length?sel.map(a=>`<div class="qrow"><span class="chip t-${a.type}"><span class="dot"></span>${esc(a.name)}</span>${qtyInput(a.id,d.qty[a.id])}</div>`).join(''):'<p class="muted" style="margin:0">Choisis d’abord les aliments.</p>'};
     const drawOri=()=>{root.querySelector('#ori').innerHTML=ORIG.map(([k,l])=>`<button type="button" class="tog" data-ori="${k}" aria-pressed="${d.origin===k}">${l}</button>`).join('')};
     const drawMom=()=>{root.querySelector('#mom').innerHTML=MOM.map(([k,l])=>`<button type="button" class="tog" data-mom="${k}" aria-pressed="${d.moment===k}">${l}</button>`).join('')};
     const drawMem=()=>{root.querySelector('#pmem').innerHTML=memToggles(d.mem)};
@@ -328,7 +345,8 @@ function platForm(id,preset){const p=id?P(id):null;const d={al:new Set(p?p.alime
     root.querySelector('#f').onsubmit=e=>{e.preventDefault();const name=root.querySelector('#fn').value.trim(),fe=root.querySelector('#fe');
       if(!name){fe.textContent='Donne un nom au plat.';return}
       if(S.plats.some(x=>x.id!==id&&norm(x.name)===norm(name))){fe.textContent='Un plat porte déjà ce nom.';return}
-      const v={name,description:root.querySelector('#fdsc').value.trim(),alimentIds:[...d.al].filter(A),cat:d.cat,origin:d.origin,moment:d.moment,members:[...d.mem].filter(M),fav:root.querySelector('#ffav').checked};
+      const qty={};for(const i of [...d.al].filter(A)){const q=readQty(root.querySelector('#qtys'),i)||d.qty[i];if(q)qty[i]=q}
+      const v={qty,name,description:root.querySelector('#fdsc').value.trim(),alimentIds:[...d.al].filter(A),cat:d.cat,origin:d.origin,moment:d.moment,members:[...d.mem].filter(M),fav:root.querySelector('#ffav').checked};
       const cur=id&&P(id);if(cur)Object.assign(cur,v);else S.plats.push({id:uid(),...v});
       persist();closeSheet(1);render();toast(cur?'Plat modifié':'Plat ajouté')}})}
 
@@ -375,14 +393,37 @@ const slotList=(k,m)=>idsAt(S.planning[k]?.[m]);
 function assign(k,m,list){const day={...(S.planning[k]||{})};const l=[...new Set(list||[])];if(l.length)day[m]=l;else delete day[m];if(Object.keys(day).length)S.planning[k]=day;else delete S.planning[k]}
 function planPick(k,m){const label=`${m==='midi'?'Midi':'Soir'}, ${fromKey(k).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}`;
   openSheet(`<h2>${esc(label)}</h2><p class="muted" style="margin:0">Touche un ou plusieurs repas, par exemple un pour l’enfant et un pour les adultes.</p>${S.repas.length?`<input type="search" id="pq" placeholder="Chercher un repas" autocomplete="off" aria-label="Chercher un repas" style="margin-top:10px"><ul class="list" id="pl" style="margin-top:10px"></ul>`:'<p class="muted">Aucun repas encore. Crée ton premier repas complet : entrée, plat, protéine, laitage, dessert.</p>'}
+  <div id="prs"></div>
   <div class="actions"><button type="button" class="danger" id="pr">Tout retirer</button><button type="button" class="ghost" id="pn">+ Nouveau repas</button><button type="button" class="primary" data-close>Terminé</button></div>`,root=>{
     const pq=root.querySelector('#pq');
-    const draw=()=>{const cur=slotList(k,m);root.querySelector('#pr').hidden=!cur.length;if(!pq)return;const q=norm(pq.value);const arr=byName(S.repas).filter(r=>!q||norm(r.name+' '+summary(r)).includes(q)).sort((a,b)=>cur.includes(b.id)-cur.includes(a.id));
+    const draw=()=>{const cur=slotList(k,m);root.querySelector('#pr').hidden=!cur.length;
+      const out=cur.map(R).map(r=>`<div class="resterow"><button type="button" class="ghost" data-reste="${esc(r.id)}">+ Prévoir un reste de « ${esc(r.name)} »</button>${restesFrom(k,m,r.id).map(x=>`<span class="chip">Reste ${esc(slotLabel(x.to.k,x.to.m))}${forTxt(x.members)?' · '+esc(forTxt(x.members)):''} <button type="button" class="chipx" data-rdel="${esc(x.id)}" aria-label="Retirer ce reste">×</button></span>`).join('')}</div>`).join('');
+      const inn=restesTo(k,m).map(x=>`<span class="chip">Reste de « ${esc(R(x.rid).name)} » (${esc(slotLabel(x.from.k,x.from.m))})${forTxt(x.members)?' · '+esc(forTxt(x.members)):''} <button type="button" class="chipx" data-rdel="${esc(x.id)}" aria-label="Retirer ce reste">×</button></span>`).join('');
+      root.querySelector('#prs').innerHTML=(out||inn)?`<h3>Restes</h3>${out}${inn?`<div class="resterow">${inn}</div>`:''}`:'';
+      if(!pq)return;const q=norm(pq.value);const arr=byName(S.repas).filter(r=>!q||norm(r.name+' '+summary(r)).includes(q)).sort((a,b)=>cur.includes(b.id)-cur.includes(a.id));
       root.querySelector('#pl').innerHTML=arr.map(r=>`<li><button type="button" class="row" data-pick="${esc(r.id)}" aria-pressed="${cur.includes(r.id)}"><span class="rmain"><strong>${cur.includes(r.id)?'✓ ':''}${esc(r.name)}${whoTag(r)}</strong><span class="desc">${esc(summary(r))}</span></span></button></li>`).join('')||'<p class="muted">Aucun repas ne correspond.</p>'};
     draw();if(pq)pq.oninput=draw;
-    root.onclick=e=>{const b=e.target.closest('[data-pick]');if(b){const cur=slotList(k,m),i=b.dataset.pick;assign(k,m,cur.includes(i)?cur.filter(x=>x!==i):[...cur,i]);persist();render();draw();return}
+    root.onclick=e=>{const rb=e.target.closest('[data-reste]');if(rb){resteSheet(k,m,rb.dataset.reste,draw);return}
+      const rd=e.target.closest('[data-rdel]');if(rd){S.restes=S.restes.filter(x=>x.id!==rd.dataset.rdel);persist();render();draw();return}
+      const b=e.target.closest('[data-pick]');if(b){const cur=slotList(k,m),i=b.dataset.pick;assign(k,m,cur.includes(i)?cur.filter(x=>x!==i):[...cur,i]);persist();render();draw();return}
       if(e.target.id==='pr'){closeSheet(1);withUndo('Repas retirés du planning',()=>assign(k,m,[]));return}
       if(e.target.id==='pn')repasForm(null,rid=>assign(k,m,[...slotList(k,m),rid]))}})}
+
+
+/* ---------- restes ---------- */
+const slotLabel=(k,m)=>fromKey(k).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'short'})+', '+(m==='midi'?'midi':'soir');
+const resteOk=x=>R(x.rid)&&slotList(x.from.k,x.from.m).includes(x.rid);
+const restesFrom=(k,m,rid)=>S.restes.filter(x=>x.from.k===k&&x.from.m===m&&x.rid===rid&&resteOk(x));
+const restesTo=(k,m)=>S.restes.filter(x=>x.to.k===k&&x.to.m===m&&resteOk(x));
+function resteSheet(k,m,rid,redraw){const r=R(rid);if(!r)return;const mem=new Set(S.members.filter(x=>x.kind==='enfant').map(x=>x.id));
+  const opts=[];const d0=fromKey(k);for(let i=0;i<8;i++){const d=new Date(d0);d.setDate(d0.getDate()+i);const kk=keyOf(d);for(const [mm] of MOMENTS){if(i===0&&(mm==='midi'||m==='soir'))continue;opts.push([kk,mm])}}
+  openSheet(`<h2>Reste de « ${esc(r.name)} »</h2><p class="muted" style="margin:0">Préparé ${esc(slotLabel(k,m))}. Le reste compte dans les quantités de ce repas, pas en plus.</p>
+  <label>Mangé quand<select id="rt">${opts.map(([kk,mm])=>`<option value="${kk}|${mm}">${esc(slotLabel(kk,mm))}</option>`).join('')}</select></label>
+  <fieldset><legend>Pour qui</legend><div id="rm"></div></fieldset>
+  <div class="actions"><button type="button" class="ghost" data-close>Annuler</button><button type="button" class="primary" id="rs">Prévoir le reste</button></div>`,root=>{
+    const draw=()=>{root.querySelector('#rm').innerHTML=memToggles(mem)};draw();
+    root.onclick=e=>{const b=e.target.closest('[data-mem]');if(b){const i=b.dataset.mem;mem.has(i)?mem.delete(i):mem.add(i);draw();return}
+      if(e.target.id==='rs'){const [tk,tm]=root.querySelector('#rt').value.split('|');S.restes.push({id:uid(),rid,from:{k,m},to:{k:tk,m:tm},members:[...mem].filter(M)});persist();closeSheet(2);render();redraw();toast('Reste prévu')}}},2)}
 
 /* ---------- modèles de semaine ---------- */
 let clip=null;
@@ -413,20 +454,23 @@ function weekSheet(){const cur=readWeek(ui.week),n=countWeek(cur);
 function coursesSheet(){const days=weekDays(ui.week),wk=keyOf(days[0]);const cs=S.courses[wk]||{checked:[],extra:[]};
   const save=()=>{S.courses[wk]=cs;const old=keyOf(weekDays(ui.week-8)[0]);for(const k of Object.keys(S.courses))if(k<old)delete S.courses[k];persist()};
   const f=d=>d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
-  openSheet(`<h2>Liste de courses</h2><p class="muted" style="margin:0">Semaine du ${f(days[0])} au ${f(days[6])}, d’après les repas prévus.</p><div id="cl"></div>
+  openSheet(`<h2>Liste de courses</h2><p class="muted" style="margin:0">Semaine du ${f(days[0])} au ${f(days[6])}, d’après les repas prévus. Quantités = quantité par adulte × portions (enfant = ½), restes compris.</p><div id="cl"></div>
   <h3>En plus</h3><div class="addtype"><input id="cx" placeholder="ex. Papier toilette" autocomplete="off" aria-label="Article en plus"><button type="button" class="ghost" id="cxb">Ajouter</button></div>
   <div class="actions"><button type="button" class="ghost" id="cr">Tout décocher</button><button type="button" class="ghost" data-close>Fermer</button><button type="button" class="primary" id="cc">Copier la liste</button></div>`,root=>{
-    const build=()=>{const al=new Map(),ready=new Map();const bump=(m,k)=>m.set(k,(m.get(k)||0)+1);
-      for(const d of days){const p=S.planning[keyOf(d)]||{};for(const [m] of MOMENTS)for(const r of idsAt(p[m]).map(R)){for(const [s] of SLOTS){const ref=r.slots[s],o=refObj(ref);if(!o)continue;
-        if(ref.k==='a')bump(al,o.id);else if(o.origin==='toutfait')bump(ready,o.id);else o.alimentIds.filter(A).forEach(i=>bump(al,i))}}}
+    const build=()=>{const al=new Map(),ready=new Map();
+      const add=(map,id,q,por)=>{const e=map.get(id)||{c:0,p:0,u:new Map()};e.c++;e.p+=por;if(q)e.u.set(q.u,(e.u.get(q.u)||0)+q.n*por);map.set(id,e)};
+      for(const d of days){const k=keyOf(d);for(const [m] of MOMENTS)for(const rid of slotList(k,m)){const r=R(rid);const por=portions(r.members)+restesFrom(k,m,rid).reduce((n,x)=>n+portions(x.members),0);
+        for(const [s] of SLOTS){const ref=r.slots[s],o=refObj(ref);if(!o)continue;
+          if(ref.k==='a')add(al,o.id,o.qty,por);else if(o.origin==='toutfait')add(ready,o.id,null,por);else o.alimentIds.filter(A).forEach(i=>add(al,i,o.qty&&o.qty[i],por))}}}
       return {al,ready}};
+    const amount=(e,ready)=>ready?(e.p===1?'1 portion':e.p.toLocaleString('fr-FR')+' portions'):e.u.size?[...e.u].map(([u,n])=>fmtQ(n,u)).join(' + '):(e.c>1?'×'+e.c:'');
     let lines=[];
     const draw=()=>{const {al,ready}=build();lines=[];const ck=new Set(cs.checked);
-      const item=(key,name,n)=>{const on=ck.has(key);if(!on)lines.push(name+(n>1?` (×${n})`:''));return `<li><label class="ck${on?' done':''}"><input type="checkbox" data-ck="${esc(key)}" ${on?'checked':''}><span>${esc(name)}</span>${n>1?`<span class="muted">×${n}</span>`:''}</label></li>`};
+      const item=(key,name,txt)=>{const on=ck.has(key);if(!on)lines.push(name+(txt?` : ${txt}`:''));return `<li><label class="ck${on?' done':''}"><input type="checkbox" data-ck="${esc(key)}" ${on?'checked':''}><span>${esc(name)}</span>${txt?`<span class="amt">${esc(txt)}</span>`:''}</label></li>`};
       let h='';
-      for(const [t,l] of TYPES){const arr=byName([...al.keys()].map(A).filter(a=>a&&a.type===t));if(!arr.length)continue;lines.push('','#'+l+'s');h+=`<h3 class="t-${t}" style="display:flex;gap:8px;align-items:center"><span class="dot"></span>${l}s</h3><ul class="cklist">${arr.map(a=>item('a:'+a.id,a.name,al.get(a.id))).join('')}</ul>`}
-      const rp=byName([...ready.keys()].map(P).filter(Boolean));if(rp.length){lines.push('','#Plats tout faits');h+=`<h3>Plats tout faits</h3><ul class="cklist">${rp.map(p=>item('p:'+p.id,p.name,ready.get(p.id))).join('')}</ul>`}
-      if(cs.extra.length){lines.push('','#En plus');h+=`<h3>En plus</h3><ul class="cklist">${cs.extra.map((x,i)=>item('x:'+x,x,1).replace('</label></li>',`</label><button type="button" class="x" data-xdel="${i}" aria-label="Retirer ${esc(x)}">×</button></li>`)).join('')}</ul>`}
+      for(const [t,l] of TYPES){const arr=byName([...al.keys()].map(A).filter(a=>a&&a.type===t));if(!arr.length)continue;lines.push('','#'+l+'s');h+=`<h3 class="t-${t}" style="display:flex;gap:8px;align-items:center"><span class="dot"></span>${l}s</h3><ul class="cklist">${arr.map(a=>item('a:'+a.id,a.name,amount(al.get(a.id)))).join('')}</ul>`}
+      const rp=byName([...ready.keys()].map(P).filter(Boolean));if(rp.length){lines.push('','#Plats tout faits');h+=`<h3>Plats tout faits</h3><ul class="cklist">${rp.map(p=>item('p:'+p.id,p.name,amount(ready.get(p.id),1))).join('')}</ul>`}
+      if(cs.extra.length){lines.push('','#En plus');h+=`<h3>En plus</h3><ul class="cklist">${cs.extra.map((x,i)=>item('x:'+x,x,'').replace('</label></li>',`</label><button type="button" class="x" data-xdel="${i}" aria-label="Retirer ${esc(x)}">×</button></li>`)).join('')}</ul>`}
       root.querySelector('#cl').innerHTML=h||'<p class="empty" style="margin-top:14px">Aucun repas prévu cette semaine. Remplis le planning, la liste se fera toute seule.</p>'};
     draw();
     root.onchange=e=>{const c=e.target.closest('[data-ck]');if(!c)return;const k=c.dataset.ck;cs.checked=cs.checked.filter(x=>x!==k);if(c.checked)cs.checked.push(k);save();draw()};
@@ -440,7 +484,7 @@ function coursesSheet(){const days=weekDays(ui.week),wk=keyOf(days[0]);const cs=
 /* ---------- deletes (with undo) ---------- */
 function delAliment(id){withUndo('Aliment supprimé',()=>{S.aliments=S.aliments.filter(a=>a.id!==id);S.plats.forEach(p=>p.alimentIds=p.alimentIds.filter(x=>x!==id));S.repas.forEach(r=>{for(const s in r.slots)if(r.slots[s]?.k==='a'&&r.slots[s].id===id)delete r.slots[s]})})}
 function delPlat(id){withUndo('Plat supprimé',()=>{S.plats=S.plats.filter(p=>p.id!==id);S.repas.forEach(r=>{for(const s in r.slots)if(r.slots[s]?.k==='p'&&r.slots[s].id===id)delete r.slots[s]})})}
-function delRepas(id){withUndo('Repas supprimé',()=>{S.repas=S.repas.filter(r=>r.id!==id);for(const k of Object.keys(S.planning))for(const m in S.planning[k])assign(k,m,idsAt(S.planning[k][m]).filter(x=>x!==id))})}
+function delRepas(id){withUndo('Repas supprimé',()=>{S.repas=S.repas.filter(r=>r.id!==id);S.restes=S.restes.filter(x=>x.rid!==id);for(const k of Object.keys(S.planning))for(const m in S.planning[k])assign(k,m,idsAt(S.planning[k][m]).filter(x=>x!==id))})}
 
 /* ---------- starter content (only on request) ---------- */
 function starter(){const base={legume:['Brocoli','Courge Jack Be Little','Poireau','Endive','Fenouil','Courge spaghetti','Petits pois','Haricots verts','Carotte','Pomme de terre','Chou-fleur','Courgette','Aubergine','Tomate','Concombre','Radis Blue Meat','Patate douce','Épinards','Potimarron','Champignon'],feculent:['Riz','Blé','Pâtes','Spaghettis','Vermicelles','Maïs','Semoule'],laitage:['Babybel','Comté','Tofu','Lait','Yaourt','Ricotta'],proteine:['Jambon','Poulet','Œuf','Poisson','Poisson gras','Viande rouge','Dinde'],fruit:['Pomme','Poire','Compote'],legumineuse:['Lentilles','Pois chiches','Haricots blancs','Haricots rouges','Pois cassés']};
@@ -483,8 +527,8 @@ planning:{title:'Planning',sub:()=>'Midi et soir, semaine par semaine',shell:()=
   const days=[...Array(7)].map((_,i)=>{const d=new Date(ws);d.setDate(ws.getDate()+i);return d});const tk=keyOf(now);
   const f=d=>d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
   return `<div class="weeknav"><button type="button" data-week="-1" aria-label="Semaine précédente">‹</button><div><strong>Du ${f(days[0])} au ${f(days[6])}</strong>${ui.week?'<button type="button" class="link" data-week="0">Revenir à cette semaine</button>':'<span class="muted">Cette semaine</span>'}</div><button type="button" data-week="1" aria-label="Semaine suivante">›</button></div><div class="weektools"><button type="button" class="primary" data-courses>Liste de courses</button><button type="button" class="ghost" data-wsheet>Modèles et copier / coller</button>${clip?'<button type="button" class="ghost" data-wpaste>Coller la semaine copiée</button>':''}</div>`+
-  days.map(d=>{const k=keyOf(d);return `<section class="day${k===tk?' today':''}"><h3>${d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}${k===tk?' <span class="muted">· aujourd’hui</span>':''}</h3>${MOMENTS.map(([m,ml])=>{const rs=slotList(k,m).map(R);
-    return `<button type="button" class="meal" data-day="${k}" data-moment="${m}"><span class="mlabel">${ml}</span>${rs.length?`<span class="mlist">${rs.map(r=>`<span class="mbody"><strong>${esc(r.name)}${whoTag(r)}</strong><span class="muted">${esc(summary(r))}</span></span>`).join('')}</span>`:'<span class="mbody muted">+ Choisir un repas</span>'}</button>`}).join('')}</section>`}).join('')}},
+  days.map(d=>{const k=keyOf(d);return `<section class="day${k===tk?' today':''}"><h3>${d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}${k===tk?' <span class="muted">· aujourd’hui</span>':''}</h3>${MOMENTS.map(([m,ml])=>{const rs=slotList(k,m).map(R),lo=restesTo(k,m);
+    return `<button type="button" class="meal" data-day="${k}" data-moment="${m}"><span class="mlabel">${ml}</span>${rs.length||lo.length?`<span class="mlist">${rs.map(r=>`<span class="mbody"><strong>${esc(r.name)}${whoTag(r)}</strong><span class="muted">${esc(summary(r))}</span></span>`).join('')}${lo.map(x=>`<span class="mbody"><strong><span class="reste">Reste</span> ${esc(R(x.rid).name)}${tagHtml(forTxt(x.members))}</strong><span class="muted">préparé ${esc(slotLabel(x.from.k,x.from.m))}</span></span>`).join('')}</span>`:'<span class="mbody muted">+ Choisir un repas</span>'}</button>`}).join('')}</section>`}).join('')}},
 repas:{title:'Repas complets',sub:()=>`${S.repas.length} repas · entrée, plat, protéine, laitage, dessert`,shell:()=>`<div class="tools">${search('Chercher un repas')}<div class="filters">${S.members.length?S.members.map(m=>`<button type="button" class="fchip" data-memf="${esc(m.id)}" aria-pressed="${ui.mem===m.id}">${esc(m.name)}</button>`).join(''):WHO.map(([k,l])=>`<button type="button" class="fchip" data-whof="${k}" aria-pressed="${ui.who===k}">${l}</button>`).join('')}</div></div><div id="list"></div>`,list:()=>{
   if(!S.repas.length)return `<div class="empty"><p>Compose ton premier repas complet en piochant dans tes aliments et tes plats.</p><button type="button" class="primary" data-add>Créer un repas</button></div>`;
   const q=norm(ui.q.repas);const arr=byName(S.repas).filter(r=>(!q||norm(r.name+' '+summary(r)).includes(q))&&(!ui.who||r.who===ui.who)&&(!ui.mem||!M(ui.mem)||forMember(r,ui.mem)));
