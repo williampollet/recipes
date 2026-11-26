@@ -69,7 +69,9 @@ h2{font-size:24px;line-height:1.15;margin:0 0 4px}h3{font-size:17px;margin:20px 
 .weeknav>button{width:46px;height:46px;border-radius:50%;border:1.5px solid var(--line);background:var(--card);font-size:22px}
 .link{border:0;background:none;color:var(--acc);text-decoration:underline;padding:4px;font-size:14px}
 .who{font-size:12px;font-weight:500;color:#fff;background:#7b5cc4;border-radius:6px;padding:1px 7px;vertical-align:2px;margin-left:6px;white-space:nowrap}
-.weektools{display:flex;flex-wrap:wrap;gap:8px;margin:-2px 0 12px}.weektools .ghost{flex:1}
+.cklist{list-style:none;margin:0;padding:0;display:grid;gap:6px}.cklist li{display:flex;gap:8px}
+.ck{flex:1;display:flex;align-items:center;gap:12px;min-height:48px;padding:6px 14px;background:var(--card);border:1px solid var(--line);border-radius:12px;font-weight:400;margin:0;cursor:pointer}.ck input{width:22px;height:22px;min-height:0;margin:0;accent-color:var(--acc);flex:none}.ck span:first-of-type{flex:1}.ck.done span:first-of-type{text-decoration:line-through;color:var(--mute)}
+.weektools{display:flex;flex-wrap:wrap;gap:8px;margin:-2px 0 12px}.weektools button{flex:1 1 160px}
 .day{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 12px 4px;margin-bottom:10px}
 .day.today{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
 .day h3{margin:0 0 4px;font-size:17px}.day h3::first-letter{text-transform:uppercase}
@@ -135,7 +137,12 @@ const HINT={entree:['legume','fruit'],plat:['feculent','legume','proteine','legu
 const MOM=[['midi','Midi'],['soir','Soir'],['both','Midi et soir']];const ML=Object.fromEntries(MOM);
 const ORIG=[['maison','Maison'],['toutfait','Tout fait']];const OL=Object.fromEntries(ORIG);
 const WHO=[['commun','Commun'],['enfant','Enfant']];const WL=Object.fromEntries(WHO);
-const whoTag=r=>r.who==='enfant'?' <span class="who">Enfant</span>':'';
+const M=id=>S.members.find(m=>m.id===id);
+const forTxt=list=>{const ms=(list||[]).map(M).filter(Boolean);return ms.length&&ms.length<S.members.length?ms.map(m=>m.name).join(', '):''};
+const tagHtml=t=>t?` <span class="who">${esc(t)}</span>`:'';
+const whoTag=r=>tagHtml(forTxt(r.members)||(!(r.members||[]).length&&r.who==='enfant'?'Enfant':''));
+const forMember=(x,id)=>!(x.members||[]).filter(M).length||x.members.includes(id);
+const memToggles=set=>S.members.length?`<div class="seg">${S.members.map(m=>`<button type="button" class="tog" data-mem="${esc(m.id)}" aria-pressed="${set.has(m.id)}">${esc(m.name)} <span class="muted">${m.kind==='enfant'?'enfant':'adulte'}</span></button>`).join('')}</div><p class="muted" style="margin:6px 0 0;font-size:14px">Personne de coché = toute la famille.</p>`:'<p class="muted" style="margin:0">Déclare ta famille avec le menu ⋯ en haut à droite pour choisir qui mange quoi.</p>';
 const MOMENTS=[['midi','Midi'],['soir','Soir']];
 // Plat types: p = "Gratin de courgette", s = "Courgette vapeur"
 const CATS=[{id:'soupe',label:'Soupe',p:'Soupe'},{id:'gratin',label:'Gratin',p:'Gratin'},{id:'vapeur',label:'Vapeur',s:'vapeur'},{id:'poele',label:'Poêlé',s:'à la poêle'},{id:'four',label:'Au four',s:'au four'},{id:'salade',label:'Salade',p:'Salade'},{id:'puree',label:'Purée',p:'Purée'},{id:'mijote',label:'Mijoté',p:'Mijoté'},{id:'plancha',label:'Plancha',s:'à la plancha'}];
@@ -145,13 +152,17 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
 const byName=arr=>[...arr].sort((a,b)=>String(a.name).localeCompare(String(b.name),'fr'));
-const empty=()=>({v:1,aliments:[],plats:[],repas:[],planning:{},cats:[],weeks:[]});
-function clean(d){const s=empty();if(d&&typeof d==='object'){for(const k of['aliments','plats','repas','cats','weeks'])if(Array.isArray(d[k]))s[k]=d[k].filter(x=>x&&typeof x.id==='string');if(d.planning&&typeof d.planning==='object'&&!Array.isArray(d.planning))s.planning=d.planning}
+const empty=()=>({v:1,aliments:[],plats:[],repas:[],planning:{},cats:[],weeks:[],members:[],courses:{}});
+function clean(d){const s=empty();if(d&&typeof d==='object'){for(const k of['aliments','plats','repas','cats','weeks','members'])if(Array.isArray(d[k]))s[k]=d[k].filter(x=>x&&typeof x.id==='string');if(d.planning&&typeof d.planning==='object'&&!Array.isArray(d.planning))s.planning=d.planning}
   s.aliments=s.aliments.map(a=>({id:a.id,name:String(a.name||''),type:TL[a.type]?a.type:'legume'}));
   s.plats=s.plats.map(p=>({id:p.id,name:String(p.name||''),description:String(p.description||''),alimentIds:Array.isArray(p.alimentIds)?p.alimentIds.filter(x=>typeof x==='string'):[],cat:typeof p.cat==='string'?p.cat:'',origin:['maison','toutfait'].includes(p.origin)?p.origin:'',moment:ML[p.moment]?p.moment:'',fav:!!p.fav}));
   s.repas=s.repas.map(r=>({id:r.id,name:String(r.name||''),who:r.who==='enfant'?'enfant':'commun',slots:r.slots&&typeof r.slots==='object'?r.slots:{}}));
   s.weeks=s.weeks.map(w=>({id:w.id,name:String(w.name||'Semaine'),days:Array.isArray(w.days)?w.days.slice(0,7).map(d=>d&&typeof d==='object'?{midi:typeof d.midi==='string'?d.midi:undefined,soir:typeof d.soir==='string'?d.soir:undefined}:{}):[]}));
   s.mig=Number(d&&d.mig)||0;
+  const ids=v=>Array.isArray(v)?v.filter(x=>typeof x==='string'):[];
+  s.members=s.members.map(m=>({id:m.id,name:String(m.name||''),kind:m.kind==='enfant'?'enfant':'adulte'}));
+  const mm=k=>new Map(((d&&Array.isArray(d[k]))?d[k]:[]).filter(x=>x&&typeof x==='object').map(x=>[x.id,x.members]));const pm=mm('plats'),rm=mm('repas');s.plats.forEach(x=>x.members=ids(pm.get(x.id)));s.repas.forEach(x=>x.members=ids(rm.get(x.id)));
+  s.courses={};if(d&&d.courses&&typeof d.courses==='object')for(const k in d.courses){const c=d.courses[k]||{};s.courses[k]={checked:ids(c.checked),extra:ids(c.extra)}}
   s.cats=s.cats.map(c=>({id:c.id,label:String(c.label||'')}));
   return s}
 let S=empty();
@@ -205,7 +216,7 @@ function loginSheet(msg){openSheet(`<h2>Connexion</h2><p class="muted" style="ma
 
 
 /* ---------- mise à jour des aliments (audit du 26/11) ---------- */
-function migrate(){if(S.mig>=3||!S.aliments.length)return false;
+function migrate(){if((S.mig||0)>=4||!S.aliments.length)return false;S.mig=S.mig||0;
   if(S.mig<2){
   const find=n=>S.aliments.find(a=>norm(a.name)===norm(n));
   const setType=(n,t)=>{const a=find(n);if(a)a.type=t};
@@ -216,7 +227,7 @@ function migrate(){if(S.mig>=3||!S.aliments.length)return false;
   const dahl=S.plats.find(p=>norm(p.name)==='dahl'),lc=find('Lentilles corail');if(dahl&&lc&&!dahl.alimentIds.includes(lc.id))dahl.alimentIds.push(lc.id);
   S.mig=2}
   /* audit des plats */
-  {const find=n=>S.aliments.find(a=>norm(a.name)===norm(n));
+  if(S.mig<3){const find=n=>S.aliments.find(a=>norm(a.name)===norm(n));
   const al=(n,t)=>{let a=find(n);if(!a){a={id:uid(),name:n,type:t||'legume'};S.aliments.push(a)}return a.id};
   const T={'Fromage râpé':'laitage','Œuf':'proteine','Pois chiches':'legumineuse','Pomme de terre':'feculent'};
   const plat=n=>S.plats.find(p=>norm(p.name)===norm(n));
@@ -226,8 +237,9 @@ function migrate(){if(S.mig>=3||!S.aliments.length)return false;
   addTo('Crudités',['Carotte','Tomate','Concombre','Radis Blue Meat']);addTo('Légumes vapeur',['Brocoli','Carotte','Haricots verts']);
   addTo('Soupe de légumes',['Carotte','Poireau','Pomme de terre','Courgette']);addTo('Gaufres aux légumes',['Courgette','Carotte','Œuf']);
   for(const g of ['Gratin de brocoli','Gratin de chou-fleur','Gratin de courge spaghetti','Gratin de patate douce et épinards','Quiche aux épinards','Quiche aux poireaux'])addTo(g,['Fromage râpé']);
-  addTo('Tarte aux poireaux',['Œuf','Fromage râpé']);addTo('Couscous',['Pois chiches','Carotte','Courgette']);addTo('Moussaka',['Tomate'])}
-  S.mig=3;return true}
+  addTo('Tarte aux poireaux',['Œuf','Fromage râpé']);addTo('Couscous',['Pois chiches','Carotte','Courgette']);addTo('Moussaka',['Tomate']);S.mig=3}
+  if(S.mig<4){for(const n of ['Brassé nature','Brassé poire','Brassé vanille','Brassé framboise'])if(!S.aliments.some(a=>norm(a.name)===norm(n)))S.aliments.push({id:uid(),name:n,type:'laitage'});S.mig=4}
+  return true}
 
 /* ---------- sheets & toast ---------- */
 const L1=$('#layer1'),L2=$('#layer2'),S1=$('#sheet1'),S2=$('#sheet2');
@@ -262,13 +274,14 @@ function ideasFor(a){return allCats().map(c=>{const ex=S.plats.find(p=>p.cat===c
   return ex?`<button type="button" class="idea" disabled title="Existe déjà">✓ ${esc(ex.name)}</button>`:`<button type="button" class="idea" data-idea="${esc(c.id)}">+ ${esc(ideaName(c,a))}</button>`}).join('')}
 
 /* ---------- plat form ---------- */
-function platForm(id,preset){const p=id?P(id):null;const d={al:new Set(p?p.alimentIds:preset?.al?[preset.al]:[]),cat:p?p.cat:preset?.cat||'',origin:p?p.origin:'',moment:p?p.moment:'',fav:p?p.fav:false};let armed=false;
+function platForm(id,preset){const p=id?P(id):null;const d={al:new Set(p?p.alimentIds:preset?.al?[preset.al]:[]),cat:p?p.cat:preset?.cat||'',origin:p?p.origin:'',moment:p?p.moment:'',fav:p?p.fav:false,mem:new Set(p?.members||[])};let armed=false;
   const pa=preset?.al&&A(preset.al),pc=preset?.cat&&C(preset.cat);const pname=p?p.name:(pa&&pc?ideaName(pc,pa):'');
   const inRepas=id?S.repas.filter(r=>Object.values(r.slots).some(s=>s&&s.k==='p'&&s.id===id)).length:0;
   openSheet(`<h2>${p?'Modifier le plat':'Nouveau plat'}</h2><form id="f" novalidate>
   <label>Nom<input id="fn" value="${esc(pname)}" autocomplete="off" placeholder="ex. Poulet rôti"></label>
   <fieldset><legend>Catégorie</legend><div class="seg" id="ori"></div></fieldset>
   <fieldset><legend>Plutôt pour</legend><div class="seg" id="mom"></div></fieldset>
+  <fieldset><legend>Pour qui</legend><div id="pmem"></div></fieldset>
   <fieldset><legend>Type de plat</legend><div class="togs" id="cats"></div>
   <div class="addtype"><input id="nc" placeholder="Autre type (ex. Wok)" autocomplete="off" aria-label="Nouveau type de plat"><button type="button" class="ghost" id="ncb">Ajouter</button></div></fieldset>
   <label>Description<textarea id="fdsc" rows="3" placeholder="Comment tu le prépares, avec quoi…">${esc(p?.description||'')}</textarea></label>
@@ -289,11 +302,13 @@ function platForm(id,preset){const p=id?P(id):null;const d={al:new Set(p?p.alime
       root.querySelector('#fcount').textContent=d.al.size?`· ${d.al.size} choisi${d.al.size>1?'s':''}`:''};
     const drawOri=()=>{root.querySelector('#ori').innerHTML=ORIG.map(([k,l])=>`<button type="button" class="tog" data-ori="${k}" aria-pressed="${d.origin===k}">${l}</button>`).join('')};
     const drawMom=()=>{root.querySelector('#mom').innerHTML=MOM.map(([k,l])=>`<button type="button" class="tog" data-mom="${k}" aria-pressed="${d.moment===k}">${l}</button>`).join('')};
-    drawMom();drawOri();drawCats();draw();q.oninput=draw;if(!p&&!pname)root.querySelector('#fn').focus();
+    const drawMem=()=>{root.querySelector('#pmem').innerHTML=memToggles(d.mem)};
+    drawMem();drawMom();drawOri();drawCats();draw();q.oninput=draw;if(!p&&!pname)root.querySelector('#fn').focus();
     const addCat=()=>{const inp=root.querySelector('#nc'),label=inp.value.trim();if(!label)return;let c=allCats().find(x=>norm(x.label)===norm(label));
       if(!c){c={id:'c'+uid(),label};S.cats.push(c);persist()}d.cat=c.id;inp.value='';drawCats()};
     root.querySelector('#ncb').onclick=addCat;root.querySelector('#nc').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();addCat()}};
     root.onclick=e=>{const o=e.target.closest('[data-ori]');if(o){d.origin=d.origin===o.dataset.ori?'':o.dataset.ori;drawOri();return}
+      const mb=e.target.closest('[data-mem]');if(mb){const i=mb.dataset.mem;d.mem.has(i)?d.mem.delete(i):d.mem.add(i);drawMem();return}
       const mo=e.target.closest('[data-mom]');if(mo){d.moment=d.moment===mo.dataset.mom?'':mo.dataset.mom;drawMom();return}
       const c=e.target.closest('[data-cat]');if(c){d.cat=c.dataset.cat;drawCats();return}
       const b=e.target.closest('[data-al]');if(b){const i=b.dataset.al;d.al.has(i)?d.al.delete(i):d.al.add(i);draw();return}
@@ -302,12 +317,12 @@ function platForm(id,preset){const p=id?P(id):null;const d={al:new Set(p?p.alime
     root.querySelector('#f').onsubmit=e=>{e.preventDefault();const name=root.querySelector('#fn').value.trim(),fe=root.querySelector('#fe');
       if(!name){fe.textContent='Donne un nom au plat.';return}
       if(S.plats.some(x=>x.id!==id&&norm(x.name)===norm(name))){fe.textContent='Un plat porte déjà ce nom.';return}
-      const v={name,description:root.querySelector('#fdsc').value.trim(),alimentIds:[...d.al].filter(A),cat:d.cat,origin:d.origin,moment:d.moment,fav:root.querySelector('#ffav').checked};
+      const v={name,description:root.querySelector('#fdsc').value.trim(),alimentIds:[...d.al].filter(A),cat:d.cat,origin:d.origin,moment:d.moment,members:[...d.mem].filter(M),fav:root.querySelector('#ffav').checked};
       const cur=id&&P(id);if(cur)Object.assign(cur,v);else S.plats.push({id:uid(),...v});
       persist();closeSheet(1);render();toast(cur?'Plat modifié':'Plat ajouté')}})}
 
 /* ---------- repas form & slot picker ---------- */
-function repasForm(id,onSaved){const r=id?R(id):null;const d={slots:JSON.parse(JSON.stringify(r?.slots||{})),who:r?.who||'commun'};let armed=false;
+function repasForm(id,onSaved){const r=id?R(id):null;const d={slots:JSON.parse(JSON.stringify(r?.slots||{})),who:r?.who||'commun',mem:new Set(r?.members?.length?r.members:(r?.who==='enfant'?S.members.filter(m=>m.kind==='enfant').map(m=>m.id):[]))};let armed=false;
   openSheet(`<h2>${r?'Modifier le repas':'Nouveau repas'}</h2><p class="muted" style="margin:0 0 12px">Chaque case peut être un aliment ou un plat.</p><form id="f" novalidate>
   <fieldset style="margin:0 0 14px"><legend>Pour qui</legend><div class="seg" id="who"></div></fieldset>
   <div id="slots"></div>
@@ -317,16 +332,17 @@ function repasForm(id,onSaved){const r=id?R(id):null;const d={slots:JSON.parse(J
     const draw=()=>{root.querySelector('#slots').innerHTML=SLOTS.map(([s,l])=>{const o=refObj(d.slots[s]);
       return `<div class="slotrow"><button type="button" class="slotbtn" data-slot="${s}"><span class="sl">${l}</span>${o?(d.slots[s].k==='a'?`<span class="dot t-${o.type}"></span>`:'<span class="pl">Plat</span>')+`<span>${esc(o.name)}</span>`:'<span class="muted">Choisir…</span>'}</button>${o?`<button type="button" class="x" data-clear="${s}" aria-label="Retirer ${l}">×</button>`:''}</div>`}).join('');
       root.querySelector('#fn').placeholder=autoName(d)||'Nom automatique'};
-    const drawWho=()=>{root.querySelector('#who').innerHTML=WHO.map(([k,l])=>`<button type="button" class="tog" data-who="${k}" aria-pressed="${d.who===k}">${l==='Commun'?'Commun (toute la famille)':'Juste pour l’enfant'}</button>`).join('')};
+    const drawWho=()=>{root.querySelector('#who').innerHTML=S.members.length?memToggles(d.mem):WHO.map(([k,l])=>`<button type="button" class="tog" data-who="${k}" aria-pressed="${d.who===k}">${l==='Commun'?'Commun (toute la famille)':'Juste pour l’enfant'}</button>`).join('')};
     drawWho();draw();
     root.onclick=e=>{const wb=e.target.closest('[data-who]');if(wb){d.who=wb.dataset.who;drawWho();return}
+      const mb=e.target.closest('[data-mem]');if(mb){const i=mb.dataset.mem;d.mem.has(i)?d.mem.delete(i):d.mem.add(i);drawWho();return}
       const s=e.target.closest('[data-slot]');if(s){slotPicker(s.dataset.slot,d,draw);return}
       const c=e.target.closest('[data-clear]');if(c){delete d.slots[c.dataset.clear];draw();return}
       if(e.target.id==='fd'){if(!armed){armed=true;e.target.textContent='Confirmer la suppression';return}closeSheet(1);delRepas(id)}};
     root.querySelector('#f').onsubmit=e=>{e.preventDefault();const slots={};for(const [s] of SLOTS)if(refObj(d.slots[s]))slots[s]={k:d.slots[s].k,id:d.slots[s].id};
       if(!Object.keys(slots).length){root.querySelector('#fe').textContent='Choisis au moins un élément.';return}
       const name=root.querySelector('#fn').value.trim()||autoName({slots});const cur=id&&R(id);let rid=id;
-      if(cur)Object.assign(cur,{name,slots,who:d.who});else{rid=uid();S.repas.push({id:rid,name,slots,who:d.who})}
+      const members=[...d.mem].filter(M);if(cur)Object.assign(cur,{name,slots,who:d.who,members});else{rid=uid();S.repas.push({id:rid,name,slots,who:d.who,members})}
       if(onSaved)onSaved(rid);persist();closeSheet(1);render();toast(cur?'Repas modifié':'Repas créé')}})}
 function slotPicker(slot,d,redraw){const hint=HINT[slot],platsFirst=['entree','plat','dessert'].includes(slot);
   openSheet(`<h2>${SL[slot]}</h2><input type="search" id="sq" placeholder="Chercher un aliment ou un plat" autocomplete="off" aria-label="Chercher"><div id="sl"></div><div class="actions"><button type="button" class="ghost" data-close>Fermer</button></div>`,root=>{
@@ -380,6 +396,35 @@ function weekSheet(){const cur=readWeek(ui.week),n=countWeek(cur);
       if(t.dataset.wapply){const w=S.weeks.find(x=>x.id===t.dataset.wapply);if(w){closeSheet(1);writeWeek(ui.week,w.days,`Modèle « ${w.name} » appliqué`)}return}
       if(t.dataset.wdel){const w=S.weeks.find(x=>x.id===t.dataset.wdel);if(!w)return;if(t.dataset.armed){withUndo('Modèle supprimé',()=>{S.weeks=S.weeks.filter(x=>x.id!==w.id)});draw();}else{t.dataset.armed='1';t.textContent='✓';t.setAttribute('aria-label','Confirmer la suppression')}}}})}
 
+
+/* ---------- liste de courses ---------- */
+function coursesSheet(){const days=weekDays(ui.week),wk=keyOf(days[0]);const cs=S.courses[wk]||{checked:[],extra:[]};
+  const save=()=>{S.courses[wk]=cs;const old=keyOf(weekDays(ui.week-8)[0]);for(const k of Object.keys(S.courses))if(k<old)delete S.courses[k];persist()};
+  const f=d=>d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
+  openSheet(`<h2>Liste de courses</h2><p class="muted" style="margin:0">Semaine du ${f(days[0])} au ${f(days[6])}, d’après les repas prévus.</p><div id="cl"></div>
+  <h3>En plus</h3><div class="addtype"><input id="cx" placeholder="ex. Papier toilette" autocomplete="off" aria-label="Article en plus"><button type="button" class="ghost" id="cxb">Ajouter</button></div>
+  <div class="actions"><button type="button" class="ghost" id="cr">Tout décocher</button><button type="button" class="ghost" data-close>Fermer</button><button type="button" class="primary" id="cc">Copier la liste</button></div>`,root=>{
+    const build=()=>{const al=new Map(),ready=new Map();const bump=(m,k)=>m.set(k,(m.get(k)||0)+1);
+      for(const d of days){const p=S.planning[keyOf(d)]||{};for(const [m] of MOMENTS){const r=R(p[m]);if(!r)continue;for(const [s] of SLOTS){const ref=r.slots[s],o=refObj(ref);if(!o)continue;
+        if(ref.k==='a')bump(al,o.id);else if(o.origin==='toutfait')bump(ready,o.id);else o.alimentIds.filter(A).forEach(i=>bump(al,i))}}}
+      return {al,ready}};
+    let lines=[];
+    const draw=()=>{const {al,ready}=build();lines=[];const ck=new Set(cs.checked);
+      const item=(key,name,n)=>{const on=ck.has(key);if(!on)lines.push(name+(n>1?` (×${n})`:''));return `<li><label class="ck${on?' done':''}"><input type="checkbox" data-ck="${esc(key)}" ${on?'checked':''}><span>${esc(name)}</span>${n>1?`<span class="muted">×${n}</span>`:''}</label></li>`};
+      let h='';
+      for(const [t,l] of TYPES){const arr=byName([...al.keys()].map(A).filter(a=>a&&a.type===t));if(!arr.length)continue;lines.push('','#'+l+'s');h+=`<h3 class="t-${t}" style="display:flex;gap:8px;align-items:center"><span class="dot"></span>${l}s</h3><ul class="cklist">${arr.map(a=>item('a:'+a.id,a.name,al.get(a.id))).join('')}</ul>`}
+      const rp=byName([...ready.keys()].map(P).filter(Boolean));if(rp.length){lines.push('','#Plats tout faits');h+=`<h3>Plats tout faits</h3><ul class="cklist">${rp.map(p=>item('p:'+p.id,p.name,ready.get(p.id))).join('')}</ul>`}
+      if(cs.extra.length){lines.push('','#En plus');h+=`<h3>En plus</h3><ul class="cklist">${cs.extra.map((x,i)=>item('x:'+x,x,1).replace('</label></li>',`</label><button type="button" class="x" data-xdel="${i}" aria-label="Retirer ${esc(x)}">×</button></li>`)).join('')}</ul>`}
+      root.querySelector('#cl').innerHTML=h||'<p class="empty" style="margin-top:14px">Aucun repas prévu cette semaine. Remplis le planning, la liste se fera toute seule.</p>'};
+    draw();
+    root.onchange=e=>{const c=e.target.closest('[data-ck]');if(!c)return;const k=c.dataset.ck;cs.checked=cs.checked.filter(x=>x!==k);if(c.checked)cs.checked.push(k);save();draw()};
+    const addX=()=>{const i=root.querySelector('#cx'),v=i.value.trim();if(!v)return;if(!cs.extra.includes(v))cs.extra.push(v);i.value='';save();draw()};
+    root.querySelector('#cxb').onclick=addX;root.querySelector('#cx').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();addX()}};
+    root.onclick=e=>{const x=e.target.closest('[data-xdel]');if(x){const v=cs.extra[+x.dataset.xdel];cs.extra.splice(+x.dataset.xdel,1);cs.checked=cs.checked.filter(k=>k!=='x:'+v);save();draw();return}
+      if(e.target.id==='cr'){cs.checked=[];save();draw();return}
+      if(e.target.id==='cc'){const txt=('Courses du '+f(days[0])+' au '+f(days[6])+'\n'+lines.map(l=>!l?'':l[0]==='#'?l.slice(1):'- '+l).join('\n')).trim();
+        const done=m=>{e.target.textContent=m};try{navigator.clipboard.writeText(txt).then(()=>done('Copiée ✓'),()=>done('Copie impossible'))}catch(x){done('Copie impossible')}}}})}
+
 /* ---------- deletes (with undo) ---------- */
 function delAliment(id){withUndo('Aliment supprimé',()=>{S.aliments=S.aliments.filter(a=>a.id!==id);S.plats.forEach(p=>p.alimentIds=p.alimentIds.filter(x=>x!==id));S.repas.forEach(r=>{for(const s in r.slots)if(r.slots[s]?.k==='a'&&r.slots[s].id===id)delete r.slots[s]})})}
 function delPlat(id){withUndo('Plat supprimé',()=>{S.plats=S.plats.filter(p=>p.id!==id);S.repas.forEach(r=>{for(const s in r.slots)if(r.slots[s]?.k==='p'&&r.slots[s].id===id)delete r.slots[s]})})}
@@ -394,40 +439,51 @@ function starter(){const base={legume:['Brocoli','Courge Jack Be Little','Poirea
   for(const [n,als,cat,origin,moment,fav] of plats)if(!S.plats.some(p=>norm(p.name)===norm(n)))S.plats.push({id:uid(),name:n,description:'',alimentIds:als.map(x=>get(x)),cat,origin,moment,fav:!!fav});
   migrate();persist();render();toast('Tes listes ont été ajoutées')}
 
+
+/* ---------- famille ---------- */
+function famMount(root){const box=root.querySelector('#fam');if(!box)return;let armed='';
+  const draw=()=>{box.innerHTML=(S.members.length?`<ul class="list">${S.members.map(m=>`<li class="rowwrap"><span class="row" style="cursor:default"><span class="rmain"><strong>${esc(m.name)}</strong></span><button type="button" class="tog" data-mkind="${esc(m.id)}">${m.kind==='enfant'?'Enfant':'Adulte'}</button></span><button type="button" class="starbtn" data-mdel="${esc(m.id)}" aria-label="${armed===m.id?'Confirmer la suppression':'Retirer '+esc(m.name)}">${armed===m.id?'✓':'×'}</button></li>`).join('')}</ul>`:'<p class="muted" style="margin:0">Personne pour l’instant.</p>')+`<div class="addtype"><input id="mn" placeholder="Prénom" autocomplete="off" aria-label="Prénom"><select id="mk" aria-label="Adulte ou enfant" style="width:auto"><option value="adulte">Adulte</option><option value="enfant">Enfant</option></select><button type="button" class="ghost" id="mb">Ajouter</button></div>`;
+    box.querySelector('#mb').onclick=()=>{const n=box.querySelector('#mn').value.trim();if(!n)return;S.members.push({id:uid(),name:n,kind:box.querySelector('#mk').value});persist();render();draw()};
+    box.querySelector('#mn').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();box.querySelector('#mb').click()}}};
+  box.onclick=e=>{const k=e.target.closest('[data-mkind]');if(k){const m=M(k.dataset.mkind);if(m){m.kind=m.kind==='enfant'?'adulte':'enfant';persist();render();draw()}return}
+    const x=e.target.closest('[data-mdel]');if(x){const id=x.dataset.mdel;if(armed!==id){armed=id;draw();return}armed='';withUndo('Membre retiré',()=>{S.members=S.members.filter(m=>m.id!==id);for(const o of [...S.plats,...S.repas])o.members=(o.members||[]).filter(i=>i!==id)});draw()}};
+  draw()}
+
 /* ---------- données : export / import ---------- */
 function menuSheet(){const json=JSON.stringify(S);
-  openSheet(`<h2>Données</h2>${ACCOUNT()}<h3>Exporter</h3><p class="muted" style="margin-top:0">Copie toutes tes données pour les sauvegarder ou les mettre dans l’autre version de l’app.</p><button type="button" class="ghost" id="cp">Copier les données</button>
+  openSheet(`<h2>Famille et données</h2><h3>Famille</h3><div id="fam"></div><h3>Compte</h3>${ACCOUNT()}<h3>Exporter</h3><p class="muted" style="margin-top:0">Copie toutes tes données pour les sauvegarder ou les mettre dans l’autre version de l’app.</p><button type="button" class="ghost" id="cp">Copier les données</button>
   <h3>Importer</h3><p class="muted" style="margin-top:0">Colle des données copiées depuis l’app. Elles remplacent les données actuelles (tu pourras annuler).</p><textarea id="imp" rows="4" placeholder="Coller ici" aria-label="Données à importer"></textarea><p class="err" id="ie" role="alert"></p>
   <div class="actions"><button type="button" class="ghost" data-close>Fermer</button><button type="button" class="primary" id="ib">Importer</button></div>`,root=>{
     root.querySelector('#cp').onclick=async e=>{try{await navigator.clipboard.writeText(json);e.target.textContent='Copié ✓'}catch(x){const t=root.querySelector('#imp');t.value=json;t.focus();t.select();e.target.textContent='Texte sélectionné ci-dessous : copie-le'}};
     root.querySelector('#ib').onclick=()=>{let d;try{d=JSON.parse(root.querySelector('#imp').value)}catch(x){root.querySelector('#ie').textContent='Ce texte n’est pas reconnu.';return}
       const c=clean(d);if(!c.aliments.length&&!c.plats.length&&!c.repas.length){root.querySelector('#ie').textContent='Aucune donnée trouvée dans ce texte.';return}
       closeSheet(1);withUndo(`Importé : ${c.aliments.length} aliments, ${c.plats.length} plats, ${c.repas.length} repas`,()=>{S=c})};
+    famMount(root);
     const lo=root.querySelector('#lo');if(lo)lo.onclick=async()=>{await sb.auth.signOut();closeSheet(1);loginSheet()};
     const li=root.querySelector('#li');if(li)li.onclick=()=>loginSheet()})}
 
 /* ---------- views ---------- */
-const ui={who:'',q:{},tf:'',al:'',cat:'',ori:'',mom:'',fav:false,week:0};
+const ui={mem:'',who:'',q:{},tf:'',al:'',cat:'',ori:'',mom:'',fav:false,week:0};
 const search=(ph)=>`<input type="search" id="q" placeholder="${ph}" value="${esc(ui.q[route]||'')}" autocomplete="off" aria-label="${ph}">`;
 const V={
 planning:{title:'Planning',sub:()=>'Midi et soir, semaine par semaine',shell:()=>'<div id="list"></div>',list:()=>{
   const now=new Date();now.setHours(0,0,0,0);const ws=new Date(now);ws.setDate(now.getDate()-((now.getDay()+6)%7)+ui.week*7);
   const days=[...Array(7)].map((_,i)=>{const d=new Date(ws);d.setDate(ws.getDate()+i);return d});const tk=keyOf(now);
   const f=d=>d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
-  return `<div class="weeknav"><button type="button" data-week="-1" aria-label="Semaine précédente">‹</button><div><strong>Du ${f(days[0])} au ${f(days[6])}</strong>${ui.week?'<button type="button" class="link" data-week="0">Revenir à cette semaine</button>':'<span class="muted">Cette semaine</span>'}</div><button type="button" data-week="1" aria-label="Semaine suivante">›</button></div><div class="weektools"><button type="button" class="ghost" data-wsheet>Modèles et copier / coller</button>${clip?'<button type="button" class="ghost" data-wpaste>Coller la semaine copiée</button>':''}</div>`+
+  return `<div class="weeknav"><button type="button" data-week="-1" aria-label="Semaine précédente">‹</button><div><strong>Du ${f(days[0])} au ${f(days[6])}</strong>${ui.week?'<button type="button" class="link" data-week="0">Revenir à cette semaine</button>':'<span class="muted">Cette semaine</span>'}</div><button type="button" data-week="1" aria-label="Semaine suivante">›</button></div><div class="weektools"><button type="button" class="primary" data-courses>Liste de courses</button><button type="button" class="ghost" data-wsheet>Modèles et copier / coller</button>${clip?'<button type="button" class="ghost" data-wpaste>Coller la semaine copiée</button>':''}</div>`+
   days.map(d=>{const k=keyOf(d);return `<section class="day${k===tk?' today':''}"><h3>${d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}${k===tk?' <span class="muted">· aujourd’hui</span>':''}</h3>${MOMENTS.map(([m,ml])=>{const r=R(S.planning[k]?.[m]);
     return `<button type="button" class="meal" data-day="${k}" data-moment="${m}"><span class="mlabel">${ml}</span>${r?`<span class="mbody"><strong>${esc(r.name)}${whoTag(r)}</strong><span class="muted">${esc(summary(r))}</span></span>`:'<span class="mbody muted">+ Choisir un repas</span>'}</button>`}).join('')}</section>`}).join('')}},
-repas:{title:'Repas complets',sub:()=>`${S.repas.length} repas · entrée, plat, protéine, laitage, dessert`,shell:()=>`<div class="tools">${search('Chercher un repas')}<div class="filters">${WHO.map(([k,l])=>`<button type="button" class="fchip" data-whof="${k}" aria-pressed="${ui.who===k}">${l}</button>`).join('')}</div></div><div id="list"></div>`,list:()=>{
+repas:{title:'Repas complets',sub:()=>`${S.repas.length} repas · entrée, plat, protéine, laitage, dessert`,shell:()=>`<div class="tools">${search('Chercher un repas')}<div class="filters">${S.members.length?S.members.map(m=>`<button type="button" class="fchip" data-memf="${esc(m.id)}" aria-pressed="${ui.mem===m.id}">${esc(m.name)}</button>`).join(''):WHO.map(([k,l])=>`<button type="button" class="fchip" data-whof="${k}" aria-pressed="${ui.who===k}">${l}</button>`).join('')}</div></div><div id="list"></div>`,list:()=>{
   if(!S.repas.length)return `<div class="empty"><p>Compose ton premier repas complet en piochant dans tes aliments et tes plats.</p><button type="button" class="primary" data-add>Créer un repas</button></div>`;
-  const q=norm(ui.q.repas);const arr=byName(S.repas).filter(r=>(!q||norm(r.name+' '+summary(r)).includes(q))&&(!ui.who||r.who===ui.who));
+  const q=norm(ui.q.repas);const arr=byName(S.repas).filter(r=>(!q||norm(r.name+' '+summary(r)).includes(q))&&(!ui.who||r.who===ui.who)&&(!ui.mem||!M(ui.mem)||forMember(r,ui.mem)));
   return arr.length?`<ul class="list">${arr.map(r=>`<li><button type="button" class="card" data-open-repas="${esc(r.id)}"><strong>${esc(r.name)}</strong>${whoTag(r)}<span class="slots">${SLOTS.filter(([s])=>refName(r.slots[s])).map(([s,l])=>`<span class="k">${l}</span><span>${esc(refName(r.slots[s]))}</span>`).join('')}</span></button></li>`).join('')}</ul>`:'<p class="muted">Aucun repas ne correspond.</p>'}},
 plats:{title:'Plats',sub:()=>`${S.plats.length} plats · ${S.plats.filter(p=>p.fav).length} favoris`,shell:()=>{const used=allCats().filter(c=>S.plats.some(p=>p.cat===c.id));
-  return `<div class="tools">${search('Chercher un plat')}<div class="filters"><button type="button" class="fchip" data-favf aria-pressed="${ui.fav}" style="--c:var(--star)">★ Favoris</button>${ORIG.map(([k,l])=>`<button type="button" class="fchip" data-orif="${k}" aria-pressed="${ui.ori===k}">${l}</button>`).join('')}${[['midi','Midi'],['soir','Soir']].map(([k,l])=>`<button type="button" class="fchip" data-momf="${k}" aria-pressed="${ui.mom===k}">${l}</button>`).join('')}${used.map(c=>`<button type="button" class="fchip" data-catf="${esc(c.id)}" aria-pressed="${ui.cat===c.id}">${esc(c.label)}</button>`).join('')}</div>
+  return `<div class="tools">${search('Chercher un plat')}<div class="filters"><button type="button" class="fchip" data-favf aria-pressed="${ui.fav}" style="--c:var(--star)">★ Favoris</button>${ORIG.map(([k,l])=>`<button type="button" class="fchip" data-orif="${k}" aria-pressed="${ui.ori===k}">${l}</button>`).join('')}${S.members.map(m=>`<button type="button" class="fchip" data-memf="${esc(m.id)}" aria-pressed="${ui.mem===m.id}">${esc(m.name)}</button>`).join('')}${[['midi','Midi'],['soir','Soir']].map(([k,l])=>`<button type="button" class="fchip" data-momf="${k}" aria-pressed="${ui.mom===k}">${l}</button>`).join('')}${used.map(c=>`<button type="button" class="fchip" data-catf="${esc(c.id)}" aria-pressed="${ui.cat===c.id}">${esc(c.label)}</button>`).join('')}</div>
   <select id="alf" aria-label="Filtrer par aliment"><option value="">Tous les aliments</option>${TYPES.map(([t,l])=>{const arr=byName(S.aliments.filter(a=>a.type===t));return arr.length?`<optgroup label="${l}s">${arr.map(a=>`<option value="${esc(a.id)}"${ui.al===a.id?' selected':''}>${esc(a.name)}</option>`).join('')}</optgroup>`:''}).join('')}</select></div><div id="list"></div>`},list:()=>{
   if(!S.plats.length)return `<div class="empty"><p>Pas encore de plat. Ajoute par exemple « Poulet rôti » avec ses aliments, ou commence avec des exemples.</p><button type="button" class="primary" data-add>Ajouter un plat</button> <button type="button" class="ghost" data-starter>Ajouter mes listes</button></div>`;
   const q=norm(ui.q.plats),al=A(ui.al);
-  const arr=byName(S.plats).filter(p=>(!q||norm(p.name+' '+p.description).includes(q))&&(!al||p.alimentIds.includes(al.id))&&(!ui.cat||p.cat===ui.cat)&&(!ui.fav||p.fav)&&(!ui.ori||p.origin===ui.ori)&&(!ui.mom||p.moment===ui.mom||p.moment==='both')).sort((a,b)=>b.fav-a.fav);
-  let h=arr.length?`<ul class="list">${arr.map(p=>`<li class="rowwrap"><button type="button" class="row" data-open-plat="${esc(p.id)}"><span class="rmain"><strong>${esc(p.name)}${C(p.cat)?` <span class="cat">${esc(C(p.cat).label)}</span>`:''}${p.origin?` <span class="cat">${OL[p.origin]}</span>`:''}${p.moment?` <span class="cat">${ML[p.moment]}</span>`:''}</strong>${p.description?`<span class="desc">${esc(p.description)}</span>`:''}<span class="chips">${p.alimentIds.map(A).filter(Boolean).map(alChip).join('')}</span></span></button><button type="button" class="starbtn" data-star="${esc(p.id)}" aria-pressed="${p.fav}" aria-label="${p.fav?'Retirer des favoris':'Mettre en favori'}">${p.fav?'★':'☆'}</button></li>`).join('')}</ul>`:'<p class="muted">Aucun plat ne correspond.</p>';
+  const arr=byName(S.plats).filter(p=>(!q||norm(p.name+' '+p.description).includes(q))&&(!al||p.alimentIds.includes(al.id))&&(!ui.cat||p.cat===ui.cat)&&(!ui.fav||p.fav)&&(!ui.ori||p.origin===ui.ori)&&(!ui.mom||p.moment===ui.mom||p.moment==='both')&&(!ui.mem||!M(ui.mem)||forMember(p,ui.mem))).sort((a,b)=>b.fav-a.fav);
+  let h=arr.length?`<ul class="list">${arr.map(p=>`<li class="rowwrap"><button type="button" class="row" data-open-plat="${esc(p.id)}"><span class="rmain"><strong>${esc(p.name)}${C(p.cat)?` <span class="cat">${esc(C(p.cat).label)}</span>`:''}${p.origin?` <span class="cat">${OL[p.origin]}</span>`:''}${p.moment?` <span class="cat">${ML[p.moment]}</span>`:''}${tagHtml(forTxt(p.members))}</strong>${p.description?`<span class="desc">${esc(p.description)}</span>`:''}<span class="chips">${p.alimentIds.map(A).filter(Boolean).map(alChip).join('')}</span></span></button><button type="button" class="starbtn" data-star="${esc(p.id)}" aria-pressed="${p.fav}" aria-label="${p.fav?'Retirer des favoris':'Mettre en favori'}">${p.fav?'★':'☆'}</button></li>`).join('')}</ul>`:'<p class="muted">Aucun plat ne correspond.</p>';
   if(al)h+=`<div class="ideabox"><h3>Idées avec ${esc(al.name)}</h3><div class="ideas">${ideasFor(al)}</div></div>`;return h}},
 aliments:{title:'Aliments',sub:()=>`${S.aliments.length} aliments`,shell:()=>`<div class="tools">${search('Chercher un aliment')}<div class="filters">${[['','Tous'],...TYPES].map(([k,l])=>`<button type="button" class="fchip ${k?'t-'+k:''}" data-tf="${k}" aria-pressed="${ui.tf===k}">${k?'<span class="dot"></span>':''}${l}</button>`).join('')}</div></div><div id="list"></div>`,list:()=>{
   if(!S.aliments.length)return `<div class="empty"><p>Ta liste d’aliments est vide. Ajoute les tiens avec le bouton +, ou ajoute d’un coup tes listes papier : 48 aliments et 32 plats, que tu pourras modifier.</p><button type="button" class="primary" data-starter>Ajouter mes listes</button></div>`;
@@ -440,7 +496,7 @@ function drawList(){const el=$('#list');if(el)el.innerHTML=V[route].list()}
 function render(){const v=V[route];$('#title').textContent=v.title;$('#sub').textContent=v.sub();document.title=v.title+' · Mes repas';
   document.querySelectorAll('nav.tabs a').forEach(a=>a.dataset.r===route?a.setAttribute('aria-current','page'):a.removeAttribute('aria-current'));
   $('#fab').hidden=route==='planning';$('#main').innerHTML=v.shell();drawList()}
-window.addEventListener('hashchange',()=>{const r=location.hash.slice(1);route=V[r]?r:'planning';closeSheet(1);render();window.scrollTo(0,0)});
+window.addEventListener('hashchange',()=>{ui.mem='';const r=location.hash.slice(1);route=V[r]?r:'planning';closeSheet(1);render();window.scrollTo(0,0)});
 document.addEventListener('input',e=>{if(e.target.id==='q'){ui.q[route]=e.target.value;drawList()}});
 document.addEventListener('change',e=>{if(e.target.id==='alf'){ui.al=e.target.value;drawList()}});
 document.addEventListener('click',e=>{const t=e.target.closest('[data-close],button,a');if(!t)return;const ds=t.dataset;
@@ -454,6 +510,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-close],but
   if(ds.idea&&t.closest('#main')&&!t.disabled){platForm(null,{al:ui.al,cat:ds.idea});return}
   if(ds.tf!==undefined){ui.tf=ds.tf;render();return}
   if(ds.catf!==undefined){ui.cat=ui.cat===ds.catf?'':ds.catf;render();return}
+  if(ds.memf!==undefined){ui.mem=ui.mem===ds.memf?'':ds.memf;render();return}
   if(ds.whof!==undefined){ui.who=ui.who===ds.whof?'':ds.whof;render();return}
   if(ds.momf!==undefined){ui.mom=ui.mom===ds.momf?'':ds.momf;render();return}
   if(ds.orif!==undefined){ui.ori=ui.ori===ds.orif?'':ds.orif;render();return}
@@ -461,6 +518,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-close],but
   if(ds.week){ui.week=ds.week==='0'?0:ui.week+Number(ds.week);drawList();return}
   if(ds.day){planPick(ds.day,ds.moment);return}
   if('wsheet' in ds){weekSheet();return}
+  if('courses' in ds){coursesSheet();return}
   if('wpaste' in ds&&clip){writeWeek(ui.week,clip,'Semaine collée');return}
   if('starter' in ds){starter();return}});
 if(migrate())persist();
