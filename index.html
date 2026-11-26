@@ -179,7 +179,7 @@ async function flush(){wt=null;if(!user||writing||!dirty||denied)return;writing=
 async function pull(){if(!user||dirty||writing)return;const {data,error}=await sb.from('app_state').select('data').eq('id',HOME_ID).maybeSingle();
   if(error){status('Cloud injoignable : données de ce téléphone affichées.');return}
   if(dirty||writing)return;status('');
-  if(data&&data.data){S=clean(data.data);if(migrate()){persist();toast('Aliments mis à jour : corrections et nouveaux aliments')}else keepLocal();render()}
+  if(data&&data.data){S=clean(data.data);if(migrate()){persist();toast('Aliments et plats mis à jour')}else keepLocal();render()}
   else if(S.aliments.length||S.plats.length||S.repas.length){dirty=true;flush()}}
 async function startSync(u){user=u;denied=false;status('Synchronisation…');await pull();
   if(live)sb.removeChannel(live);
@@ -205,7 +205,8 @@ function loginSheet(msg){openSheet(`<h2>Connexion</h2><p class="muted" style="ma
 
 
 /* ---------- mise à jour des aliments (audit du 26/11) ---------- */
-function migrate(){if(S.mig>=2||!S.aliments.length)return false;
+function migrate(){if(S.mig>=3||!S.aliments.length)return false;
+  if(S.mig<2){
   const find=n=>S.aliments.find(a=>norm(a.name)===norm(n));
   const setType=(n,t)=>{const a=find(n);if(a)a.type=t};
   setType('Tofu','proteine');setType('Pomme de terre','feculent');setType('Patate douce','feculent');
@@ -213,7 +214,20 @@ function migrate(){if(S.mig>=2||!S.aliments.length)return false;
   const add={legume:['Butternut','Poivron','Betterave','Panais','Navet','Chou de Bruxelles','Avocat','Haricots plats'],feculent:['Quinoa','Boulgour','Polenta','Gnocchis','Pain','Coquillettes'],fruit:['Banane','Clémentine','Orange','Kiwi','Fraise','Framboise','Abricot','Pêche','Raisin','Mangue','Melon'],laitage:['Fromage blanc','Petit-suisse','Emmental','Mozzarella','Chèvre','Fromage râpé'],proteine:['Bœuf haché','Steak','Saumon','Cabillaud','Thon','Filet mignon de porc','Crevettes'],legumineuse:['Lentilles corail','Flageolets']};
   for(const t in add)for(const n of add[t])if(!find(n))S.aliments.push({id:uid(),name:n,type:t});
   const dahl=S.plats.find(p=>norm(p.name)==='dahl'),lc=find('Lentilles corail');if(dahl&&lc&&!dahl.alimentIds.includes(lc.id))dahl.alimentIds.push(lc.id);
-  S.mig=2;return true}
+  S.mig=2}
+  /* audit des plats */
+  {const find=n=>S.aliments.find(a=>norm(a.name)===norm(n));
+  const al=(n,t)=>{let a=find(n);if(!a){a={id:uid(),name:n,type:t||'legume'};S.aliments.push(a)}return a.id};
+  const T={'Fromage râpé':'laitage','Œuf':'proteine','Pois chiches':'legumineuse','Pomme de terre':'feculent'};
+  const plat=n=>S.plats.find(p=>norm(p.name)===norm(n));
+  const addTo=(n,list)=>{const p=plat(n);if(!p)return;for(const x of list){const id=al(x,T[x]);if(!p.alimentIds.includes(id))p.alimentIds.push(id)}};
+  const dahl=plat('Dahl'),le=find('Lentilles');if(dahl&&le&&find('Lentilles corail')&&dahl.alimentIds.includes(find('Lentilles corail').id))dahl.alimentIds=dahl.alimentIds.filter(i=>i!==le.id);
+  addTo('Purée de blanc de poireau',['Pomme de terre']);
+  addTo('Crudités',['Carotte','Tomate','Concombre','Radis Blue Meat']);addTo('Légumes vapeur',['Brocoli','Carotte','Haricots verts']);
+  addTo('Soupe de légumes',['Carotte','Poireau','Pomme de terre','Courgette']);addTo('Gaufres aux légumes',['Courgette','Carotte','Œuf']);
+  for(const g of ['Gratin de brocoli','Gratin de chou-fleur','Gratin de courge spaghetti','Gratin de patate douce et épinards','Quiche aux épinards','Quiche aux poireaux'])addTo(g,['Fromage râpé']);
+  addTo('Tarte aux poireaux',['Œuf','Fromage râpé']);addTo('Couscous',['Pois chiches','Carotte','Courgette']);addTo('Moussaka',['Tomate'])}
+  S.mig=3;return true}
 
 /* ---------- sheets & toast ---------- */
 const L1=$('#layer1'),L2=$('#layer2'),S1=$('#sheet1'),S2=$('#sheet2');
