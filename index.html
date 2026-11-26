@@ -152,6 +152,11 @@ const portions=list=>{const ms=(list||[]).map(M).filter(Boolean);const all=ms.le
 const fmtQ=(n,u)=>{if(u==='g'&&n>=1000)return (Math.round(n/100)/10).toLocaleString('fr-FR')+' kg';if(u==='ml'&&n>=1000)return (Math.round(n/100)/10).toLocaleString('fr-FR')+' l';const v=u==='g'||u==='ml'?Math.round(n):Math.ceil(n*2)/2;return v.toLocaleString('fr-FR')+' '+(u==='pièce'&&v>1?'pièces':u==='tranche'&&v>1?'tranches':u)};
 const qtyInput=(key,q)=>`<span class="qty"><input type="number" inputmode="decimal" min="0" step="any" data-qn="${esc(key)}" value="${q?q.n:''}" placeholder="—" aria-label="Quantité"><select data-qu="${esc(key)}" aria-label="Unité">${UNITS.map(u=>`<option${q&&q.u===u?' selected':''}>${u}</option>`).join('')}</select></span>`;
 const readQty=(root,key)=>{const n=root.querySelector(`[data-qn="${key}"]`),u=root.querySelector(`[data-qu="${key}"]`);return n&&u?qOk({n:parseFloat(String(n.value).replace(',','.')),u:u.value}):undefined};
+const allShops=()=>{const set=new Set([...SHOPS,...S.shops]);for(const x of [...S.aliments,...S.plats])if(x.shop)set.add(x.shop);return [...set]};
+function shopPicker(root,box,get,set){const draw=()=>{const cur=get();box.innerHTML=`<div class="togs">${['',...allShops()].map(n=>`<button type="button" class="tog" data-shop="${esc(n)}" aria-pressed="${cur===n}">${n?esc(n):'Aucun'}</button>`).join('')}</div><div class="addtype"><input class="shopnew" placeholder="Autre magasin" autocomplete="off" aria-label="Nouveau magasin"><button type="button" class="ghost shopadd">Ajouter</button></div>`;
+    const add=()=>{const i=box.querySelector('.shopnew'),v=i.value.trim();if(!v)return;const ex=allShops().find(x=>norm(x)===norm(v));if(!ex){S.shops.push(v);persist()}set(ex||v);draw()};
+    box.querySelector('.shopadd').onclick=add;box.querySelector('.shopnew').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();add()}}};
+  box.addEventListener('click',e=>{const b=e.target.closest('[data-shop]');if(b){e.stopPropagation();set(b.dataset.shop);draw()}});draw()}
 const forMember=(x,id)=>!(x.members||[]).filter(M).length||x.members.includes(id);
 const memToggles=set=>S.members.length?`<div class="seg">${S.members.map(m=>`<button type="button" class="tog" data-mem="${esc(m.id)}" aria-pressed="${set.has(m.id)}">${esc(m.name)} <span class="muted">${m.kind==='enfant'?'enfant':'adulte'}</span></button>`).join('')}</div><p class="muted" style="margin:6px 0 0;font-size:14px">Personne de coché = toute la famille.</p>`:'<p class="muted" style="margin:0">Déclare ta famille avec le menu ⋯ en haut à droite pour choisir qui mange quoi.</p>';
 const MOMENTS=[['midi','Midi'],['soir','Soir']];
@@ -165,13 +170,15 @@ const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(
 const byName=arr=>[...arr].sort((a,b)=>String(a.name).localeCompare(String(b.name),'fr'));
 const UNITS=['g','ml','pièce','tranche','c. à s.'];
 const qOk=q=>q&&typeof q==='object'&&Number(q.n)>0&&UNITS.includes(q.u)?{n:Number(q.n),u:q.u}:undefined;
-const empty=()=>({v:1,aliments:[],plats:[],repas:[],planning:{},cats:[],weeks:[],members:[],courses:{},restes:[]});
+const SHOPS=['Supermarché','Picard','Bio c’ Bon','Marché','Fromagerie','Boulangerie','Boucherie'];
+const empty=()=>({shops:[],v:1,aliments:[],plats:[],repas:[],planning:{},cats:[],weeks:[],members:[],courses:{},restes:[]});
 function clean(d){const s=empty();if(d&&typeof d==='object'){for(const k of['aliments','plats','repas','cats','weeks','members','restes'])if(Array.isArray(d[k]))s[k]=d[k].filter(x=>x&&typeof x.id==='string');if(d.planning&&typeof d.planning==='object'&&!Array.isArray(d.planning))s.planning=d.planning}
-  s.aliments=s.aliments.map(a=>({id:a.id,name:String(a.name||''),type:TL[a.type]?a.type:'legume',qty:qOk(a.qty)}));
-  s.plats=s.plats.map(p=>({id:p.id,name:String(p.name||''),description:String(p.description||''),alimentIds:Array.isArray(p.alimentIds)?p.alimentIds.filter(x=>typeof x==='string'):[],cat:typeof p.cat==='string'?p.cat:'',origin:['maison','toutfait'].includes(p.origin)?p.origin:'',moment:ML[p.moment]?p.moment:'',fav:!!p.fav,qty:Object.fromEntries(Object.entries(p.qty&&typeof p.qty==='object'?p.qty:{}).map(([k,v])=>[k,qOk(v)]).filter(([k,v])=>v))}));
+  s.aliments=s.aliments.map(a=>({id:a.id,name:String(a.name||''),type:TL[a.type]?a.type:'legume',qty:qOk(a.qty),shop:typeof a.shop==='string'?a.shop.slice(0,60):''}));
+  s.plats=s.plats.map(p=>({id:p.id,name:String(p.name||''),description:String(p.description||''),alimentIds:Array.isArray(p.alimentIds)?p.alimentIds.filter(x=>typeof x==='string'):[],cat:typeof p.cat==='string'?p.cat:'',origin:['maison','toutfait'].includes(p.origin)?p.origin:'',moment:ML[p.moment]?p.moment:'',shop:typeof p.shop==='string'?p.shop.slice(0,60):'',fav:!!p.fav,qty:Object.fromEntries(Object.entries(p.qty&&typeof p.qty==='object'?p.qty:{}).map(([k,v])=>[k,qOk(v)]).filter(([k,v])=>v))}));
   s.repas=s.repas.map(r=>({id:r.id,name:String(r.name||''),who:r.who==='enfant'?'enfant':'commun',slots:r.slots&&typeof r.slots==='object'?r.slots:{}}));
   s.weeks=s.weeks.map(w=>({id:w.id,name:String(w.name||'Semaine'),days:Array.isArray(w.days)?w.days.slice(0,7).map(d=>d&&typeof d==='object'?{midi:d.midi,soir:d.soir}:{}):[]}));
   s.mig=Number(d&&d.mig)||0;
+  s.shops=d&&Array.isArray(d.shops)?[...new Set(d.shops.filter(x=>typeof x==='string'&&x.trim()).map(x=>x.slice(0,60)))]:[];
   const slotOk=x=>x&&typeof x.k==='string'&&(x.m==='midi'||x.m==='soir');
   s.restes=s.restes.filter(x=>typeof x.rid==='string'&&slotOk(x.from)&&slotOk(x.to)).map(x=>({id:x.id,rid:x.rid,from:{k:x.from.k,m:x.from.m},to:{k:x.to.k,m:x.to.m},members:Array.isArray(x.members)?x.members.filter(i=>typeof i==='string'):[]}));
   const ids=v=>Array.isArray(v)?v.filter(x=>typeof x==='string'):[];
@@ -231,7 +238,7 @@ function loginSheet(msg){openSheet(`<h2>Connexion</h2><p class="muted" style="ma
 
 
 /* ---------- mise à jour des aliments (audit du 26/11) ---------- */
-function migrate(){if((S.mig||0)>=7||!S.aliments.length)return false;S.mig=S.mig||0;
+function migrate(){if((S.mig||0)>=8||!S.aliments.length)return false;S.mig=S.mig||0;
   if(S.mig<2){
   const find=n=>S.aliments.find(a=>norm(a.name)===norm(n));
   const setType=(n,t)=>{const a=find(n);if(a)a.type=t};
@@ -267,6 +274,7 @@ function migrate(){if((S.mig||0)>=7||!S.aliments.length)return false;S.mig=S.mig
   if(S.mig<7){const kids=S.members.filter(m=>m.kind==='enfant').map(m=>m.id);for(const r of S.repas)if(!(r.members||[]).length&&r.who==='enfant'&&kids.length)r.members=[...kids];
     for(const k of Object.keys(S.planning))for(const m of Object.keys(S.planning[k]))assign(k,m,slotEntries(k,m));
     for(const w of S.weeks)w.days=w.days.map(d=>{const o={};for(const [m] of MOMENTS){const l=entriesAt(d&&d[m]).map(e=>({r:e.r,members:entryMembers(e)}));if(l.length)o[m]=l}return o});S.mig=7}
+  if(S.mig<8){const sh=(n,v)=>{for(const x of [...S.aliments,...S.plats])if(norm(x.name)===norm(n)&&!x.shop)x.shop=v};sh('Dinos Picard','Picard');sh('Pain','Boulangerie');sh('Comté','Fromagerie');S.mig=8}
   return true}
 
 /* ---------- sheets & toast ---------- */
@@ -280,16 +288,18 @@ function withUndo(msg,fn){const before=JSON.stringify(S);fn();persist();render()
 const alChip=a=>`<span class="chip t-${a.type}"><span class="dot"></span>${esc(a.name)}</span>`;
 
 /* ---------- aliment form ---------- */
-function alimentForm(id,preset){const a=id?A(id):null;let type=a?.type||preset?.type||'legume';let armed=false;
+function alimentForm(id,preset){const a=id?A(id):null;let type=a?.type||preset?.type||'legume';let shop=a?.shop||'';let armed=false;
   const used=id?byName(S.plats.filter(p=>p.alimentIds.includes(id))):[];
   openSheet(`<h2>${a?esc(a.name):'Nouvel aliment'}</h2><form id="f" novalidate>
   <label>Nom<input id="fn" value="${esc(a?.name||preset?.name||'')}" autocomplete="off" placeholder="ex. Courgette"></label>
   <fieldset><legend>Type</legend><div class="seg" id="seg">${TYPES.map(([k,l])=>`<button type="button" class="tog t-${k}" data-type="${k}" aria-pressed="${k===type}"><span class="dot"></span>${l}</button>`).join('')}</div></fieldset>
+  <fieldset><legend>Magasin</legend><div id="ashop"></div></fieldset>
   <fieldset><legend>Portion par adulte <span class="muted">(quand il est servi seul dans un repas)</span></legend>${qtyInput('self',a?.qty)}</fieldset>
   ${a?`<h3>Plats avec ${esc(a.name)} <span class="muted">${used.length}</span></h3>${used.length?`<ul class="list">${used.map(p=>`<li><button type="button" class="row" data-open-plat="${esc(p.id)}"><span class="rmain"><strong>${p.fav?'★ ':''}${esc(p.name)}</strong></span>${C(p.cat)?`<span class="cat">${esc(C(p.cat).label)}</span>`:''}</button></li>`).join('')}</ul>`:'<p class="muted">Aucun plat pour l’instant.</p>'}
   <div class="ideabox"><h3>Idées de plats</h3><p class="muted" style="margin:0">${esc(a.name)} croisé avec chaque type de plat. Touche une idée pour la créer.</p><div class="ideas">${ideasFor(a)}</div></div>`:''}
   <p class="err" id="fe" role="alert"></p>
   <div class="actions">${a?'<button type="button" class="danger" id="fd">Supprimer</button>':''}<button type="button" class="ghost" data-close>Annuler</button><button class="primary">Enregistrer</button></div></form>`,root=>{
+    shopPicker(root,root.querySelector('#ashop'),()=>shop,v=>{shop=v});
     if(!a)root.querySelector('#fn').focus();
     root.onclick=e=>{const b=e.target.closest('[data-type]');if(b){type=b.dataset.type;root.querySelectorAll('#seg [data-type]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.type===type));return}
       const i=e.target.closest('[data-idea]');if(i&&!i.disabled){platForm(null,{al:id,cat:i.dataset.idea});return}
@@ -297,18 +307,19 @@ function alimentForm(id,preset){const a=id?A(id):null;let type=a?.type||preset?.
     root.querySelector('#f').onsubmit=e=>{e.preventDefault();const name=root.querySelector('#fn').value.trim();const fe=root.querySelector('#fe');
       if(!name){fe.textContent='Donne un nom à l’aliment.';return}
       if(S.aliments.some(x=>x.id!==id&&norm(x.name)===norm(name))){fe.textContent='Cet aliment existe déjà.';return}
-      const qty=readQty(root,'self');const cur=id&&A(id);if(cur)Object.assign(cur,{name,type,qty});else S.aliments.push({id:uid(),name,type,qty});
+      const qty=readQty(root,'self');const cur=id&&A(id);if(cur)Object.assign(cur,{name,type,qty,shop});else S.aliments.push({id:uid(),name,type,qty,shop});
       persist();closeSheet(1);render();toast(cur?'Aliment modifié':'Aliment ajouté')}})}
 function ideasFor(a){return allCats().map(c=>{const ex=S.plats.find(p=>p.cat===c.id&&p.alimentIds.includes(a.id));
   return ex?`<button type="button" class="idea" disabled title="Existe déjà">✓ ${esc(ex.name)}</button>`:`<button type="button" class="idea" data-idea="${esc(c.id)}">+ ${esc(ideaName(c,a))}</button>`}).join('')}
 
 /* ---------- plat form ---------- */
-function platForm(id,preset){const p=id?P(id):null;const d={al:new Set(p?p.alimentIds:preset?.al?[preset.al]:[]),cat:p?p.cat:preset?.cat||'',origin:p?p.origin:'',moment:p?p.moment:'',fav:p?p.fav:false,mem:new Set(p?.members||[]),qty:{...(p?.qty||{})}};let armed=false;
+function platForm(id,preset){const p=id?P(id):null;const d={al:new Set(p?p.alimentIds:preset?.al?[preset.al]:[]),cat:p?p.cat:preset?.cat||'',origin:p?p.origin:'',moment:p?p.moment:'',shop:p?.shop||'',fav:p?p.fav:false,mem:new Set(p?.members||[]),qty:{...(p?.qty||{})}};let armed=false;
   const pa=preset?.al&&A(preset.al),pc=preset?.cat&&C(preset.cat);const pname=p?p.name:(pa&&pc?ideaName(pc,pa):'');
   const inRepas=id?S.repas.filter(r=>Object.values(r.slots).some(s=>s&&s.k==='p'&&s.id===id)).length:0;
   openSheet(`<h2>${p?'Modifier le plat':'Nouveau plat'}</h2><form id="f" novalidate>
   <label>Nom<input id="fn" value="${esc(pname)}" autocomplete="off" placeholder="ex. Poulet rôti"></label>
   <fieldset><legend>Catégorie</legend><div class="seg" id="ori"></div></fieldset>
+  <fieldset><legend>Magasin <span class="muted">(pour un plat tout fait)</span></legend><div id="pshop"></div></fieldset>
   <fieldset><legend>Plutôt pour</legend><div class="seg" id="mom"></div></fieldset>
   <fieldset><legend>Pour qui</legend><div id="pmem"></div></fieldset>
   <fieldset><legend>Type de plat</legend><div class="togs" id="cats"></div>
@@ -335,6 +346,7 @@ function platForm(id,preset){const p=id?P(id):null;const d={al:new Set(p?p.alime
     const drawOri=()=>{root.querySelector('#ori').innerHTML=ORIG.map(([k,l])=>`<button type="button" class="tog" data-ori="${k}" aria-pressed="${d.origin===k}">${l}</button>`).join('')};
     const drawMom=()=>{root.querySelector('#mom').innerHTML=MOM.map(([k,l])=>`<button type="button" class="tog" data-mom="${k}" aria-pressed="${d.moment===k}">${l}</button>`).join('')};
     const drawMem=()=>{root.querySelector('#pmem').innerHTML=memToggles(d.mem)};
+    shopPicker(root,root.querySelector('#pshop'),()=>d.shop,v=>{d.shop=v});
     drawMem();drawMom();drawOri();drawCats();draw();q.oninput=draw;if(!p&&!pname)root.querySelector('#fn').focus();
     const addCat=()=>{const inp=root.querySelector('#nc'),label=inp.value.trim();if(!label)return;let c=allCats().find(x=>norm(x.label)===norm(label));
       if(!c){c={id:'c'+uid(),label};S.cats.push(c);persist()}d.cat=c.id;inp.value='';drawCats()};
@@ -350,7 +362,7 @@ function platForm(id,preset){const p=id?P(id):null;const d={al:new Set(p?p.alime
       if(!name){fe.textContent='Donne un nom au plat.';return}
       if(S.plats.some(x=>x.id!==id&&norm(x.name)===norm(name))){fe.textContent='Un plat porte déjà ce nom.';return}
       const qty={};for(const i of [...d.al].filter(A)){const q=readQty(root.querySelector('#qtys'),i)||d.qty[i];if(q)qty[i]=q}
-      const v={qty,name,description:root.querySelector('#fdsc').value.trim(),alimentIds:[...d.al].filter(A),cat:d.cat,origin:d.origin,moment:d.moment,members:[...d.mem].filter(M),fav:root.querySelector('#ffav').checked};
+      const v={qty,name,description:root.querySelector('#fdsc').value.trim(),alimentIds:[...d.al].filter(A),cat:d.cat,origin:d.origin,shop:d.shop,moment:d.moment,members:[...d.mem].filter(M),fav:root.querySelector('#ffav').checked};
       const cur=id&&P(id);if(cur)Object.assign(cur,v);else S.plats.push({id:uid(),...v});
       persist();closeSheet(1);render();toast(cur?'Plat modifié':'Plat ajouté')}})}
 
@@ -476,16 +488,24 @@ function coursesSheet(){const days=weekDays(ui.week),wk=keyOf(days[0]);const cs=
     let lines=[];
     const draw=()=>{const {al,ready}=build();lines=[];const ck=new Set(cs.checked);
       const item=(key,name,txt)=>{const on=ck.has(key);if(!on)lines.push(name+(txt?` : ${txt}`:''));return `<li><label class="ck${on?' done':''}"><input type="checkbox" data-ck="${esc(key)}" ${on?'checked':''}><span>${esc(name)}</span>${txt?`<span class="amt">${esc(txt)}</span>`:''}</label></li>`};
-      let h='';
+      let h=`<div class="seg" style="margin:12px 0 0"><button type="button" class="tog" data-cg="shop" aria-pressed="${ui.cg!=='type'}">Par magasin</button><button type="button" class="tog" data-cg="type" aria-pressed="${ui.cg==='type'}">Par type</button></div>`;const h0=h;
+      if(ui.cg!=='type'){const groups=new Map();const put=(shop,key,name,txt,t)=>{const g=shop||'';if(!groups.has(g))groups.set(g,[]);groups.get(g).push({key,name,txt,t})};
+        for(const id of al.keys()){const a=A(id);if(a)put(a.shop,'a:'+a.id,a.name,amount(al.get(id)),TYPES.findIndex(x=>x[0]===a.type))}
+        for(const id of ready.keys()){const p=P(id);if(p)put(p.shop,'p:'+p.id,p.name,amount(ready.get(id),1),98)}
+        const order=[...groups.keys()].sort((a,b)=>(a===''?1:0)-(b===''?1:0)||a.localeCompare(b,'fr'));
+        for(const g of order){const arr=groups.get(g).sort((x,y)=>x.t-y.t||x.name.localeCompare(y.name,'fr'));lines.push('','#'+(g||'Sans magasin'));h+=`<h3>${esc(g||'Sans magasin')}</h3><ul class="cklist">${arr.map(x=>item(x.key,x.name,x.txt)).join('')}</ul>`}
+      }else{
       for(const [t,l] of TYPES){const arr=byName([...al.keys()].map(A).filter(a=>a&&a.type===t));if(!arr.length)continue;lines.push('','#'+l+'s');h+=`<h3 class="t-${t}" style="display:flex;gap:8px;align-items:center"><span class="dot"></span>${l}s</h3><ul class="cklist">${arr.map(a=>item('a:'+a.id,a.name,amount(al.get(a.id)))).join('')}</ul>`}
-      const rp=byName([...ready.keys()].map(P).filter(Boolean));if(rp.length){lines.push('','#Plats tout faits');h+=`<h3>Plats tout faits</h3><ul class="cklist">${rp.map(p=>item('p:'+p.id,p.name,amount(ready.get(p.id),1))).join('')}</ul>`}
+      const rp=byName([...ready.keys()].map(P).filter(Boolean));if(rp.length){lines.push('','#Plats tout faits');h+=`<h3>Plats tout faits</h3><ul class="cklist">${rp.map(p=>item('p:'+p.id,p.name,amount(ready.get(p.id),1))).join('')}</ul>`}}
       if(cs.extra.length){lines.push('','#En plus');h+=`<h3>En plus</h3><ul class="cklist">${cs.extra.map((x,i)=>item('x:'+x,x,'').replace('</label></li>',`</label><button type="button" class="x" data-xdel="${i}" aria-label="Retirer ${esc(x)}">×</button></li>`)).join('')}</ul>`}
+      if(h===h0&&!cs.extra.length)h='';
       root.querySelector('#cl').innerHTML=h||'<p class="empty" style="margin-top:14px">Aucun repas prévu cette semaine. Remplis le planning, la liste se fera toute seule.</p>'};
     draw();
     root.onchange=e=>{const c=e.target.closest('[data-ck]');if(!c)return;const k=c.dataset.ck;cs.checked=cs.checked.filter(x=>x!==k);if(c.checked)cs.checked.push(k);save();draw()};
     const addX=()=>{const i=root.querySelector('#cx'),v=i.value.trim();if(!v)return;if(!cs.extra.includes(v))cs.extra.push(v);i.value='';save();draw()};
     root.querySelector('#cxb').onclick=addX;root.querySelector('#cx').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();addX()}};
     root.onclick=e=>{const x=e.target.closest('[data-xdel]');if(x){const v=cs.extra[+x.dataset.xdel];cs.extra.splice(+x.dataset.xdel,1);cs.checked=cs.checked.filter(k=>k!=='x:'+v);save();draw();return}
+      const cg=e.target.closest('[data-cg]');if(cg){ui.cg=cg.dataset.cg;draw();return}
       if(e.target.id==='cr'){cs.checked=[];save();draw();return}
       if(e.target.id==='cc'){const txt=('Courses du '+f(days[0])+' au '+f(days[6])+'\n'+lines.map(l=>!l?'':l[0]==='#'?l.slice(1):'- '+l).join('\n')).trim();
         const done=m=>{e.target.textContent=m};try{navigator.clipboard.writeText(txt).then(()=>done('Copiée ✓'),()=>done('Copie impossible'))}catch(x){done('Copie impossible')}}}})}
@@ -554,7 +574,7 @@ aliments:{title:'Aliments',sub:()=>`${S.aliments.length} aliments`,shell:()=>`<d
   if(!S.aliments.length)return `<div class="empty"><p>Ta liste d’aliments est vide. Ajoute les tiens avec le bouton +, ou ajoute d’un coup tes listes papier : 48 aliments et 32 plats, que tu pourras modifier.</p><button type="button" class="primary" data-starter>Ajouter mes listes</button></div>`;
   const q=norm(ui.q.aliments);let h='';
   for(const [k,l] of TYPES){if(ui.tf&&ui.tf!==k)continue;const arr=byName(S.aliments.filter(a=>a.type===k&&(!q||norm(a.name).includes(q))));if(!arr.length)continue;
-    h+=`<section class="group"><h2 class="t-${k}"><span class="dot"></span>${l}s <span class="muted">${arr.length}</span></h2><ul class="list">${arr.map(a=>{const n=S.plats.filter(p=>p.alimentIds.includes(a.id)).length;return `<li><button type="button" class="row" data-open-al="${esc(a.id)}"><span class="rmain"><strong>${esc(a.name)}</strong></span><span class="muted">${n?n+' plat'+(n>1?'s':''):''}</span></button></li>`}).join('')}</ul></section>`}
+    h+=`<section class="group"><h2 class="t-${k}"><span class="dot"></span>${l}s <span class="muted">${arr.length}</span></h2><ul class="list">${arr.map(a=>{const n=S.plats.filter(p=>p.alimentIds.includes(a.id)).length;return `<li><button type="button" class="row" data-open-al="${esc(a.id)}"><span class="rmain"><strong>${esc(a.name)}</strong></span><span class="muted">${[a.shop,n?n+' plat'+(n>1?'s':''):''].filter(Boolean).map(esc).join(' · ')}</span></button></li>`}).join('')}</ul></section>`}
   return h||'<p class="muted">Aucun aliment ne correspond.</p>'}}};
 let route=location.hash.slice(1);if(!V[route])route='planning';
 function drawList(){const el=$('#list');if(el)el.innerHTML=V[route].list()}
