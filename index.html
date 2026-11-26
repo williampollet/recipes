@@ -238,7 +238,7 @@ function loginSheet(msg){openSheet(`<h2>Connexion</h2><p class="muted" style="ma
 
 
 /* ---------- mise à jour des aliments (audit du 26/11) ---------- */
-function migrate(){if((S.mig||0)>=9||!S.aliments.length)return false;S.mig=S.mig||0;
+function migrate(){if((S.mig||0)>=10||!S.aliments.length)return false;S.mig=S.mig||0;
   if(S.mig<2){
   const find=n=>S.aliments.find(a=>norm(a.name)===norm(n));
   const setType=(n,t)=>{const a=find(n);if(a)a.type=t};
@@ -276,6 +276,13 @@ function migrate(){if((S.mig||0)>=9||!S.aliments.length)return false;S.mig=S.mig
     for(const w of S.weeks)w.days=w.days.map(d=>{const o={};for(const [m] of MOMENTS){const l=entriesAt(d&&d[m]).map(e=>({r:e.r,members:entryMembers(e)}));if(l.length)o[m]=l}return o});S.mig=7}
   if(S.mig<8){const sh=(n,v)=>{for(const x of [...S.aliments,...S.plats])if(norm(x.name)===norm(n)&&!x.shop)x.shop=v};sh('Dinos Picard','Picard');sh('Pain','Boulangerie');sh('Comté','Fromagerie');S.mig=8}
   if(S.mig<9){for(const x of [...S.aliments,...S.plats])if(/dino|picard/.test(norm(x.name))&&!x.shop)x.shop='Picard';S.mig=9}
+  if(S.mig<10){const cheese=/comte|babybel|emmental|mozzarella|chevre|fromage rape|ricotta|parmesan|gruyere|camembert|brie|raclette|feta|tomme|roquefort|reblochon/;
+    for(const a of S.aliments){const n=norm(a.name);
+      if((a.type==='legume'||a.type==='fruit'||/^(pomme de terre|patate douce)$/.test(n))&&!/compote/.test(n)&&a.shop!=='Picard')a.shop='Marché';
+      if(cheese.test(n))a.shop='Fromagerie';
+      if(/yaourt|brasse/.test(n))a.shop='Bio c’ Bon';
+      if(/^pain/.test(n))a.shop='Boulangerie'}
+    S.mig=10}
   return true}
 
 /* ---------- sheets & toast ---------- */
@@ -320,7 +327,7 @@ function platForm(id,preset){const p=id?P(id):null;const d={al:new Set(p?p.alime
   openSheet(`<h2>${p?'Modifier le plat':'Nouveau plat'}</h2><form id="f" novalidate>
   <label>Nom<input id="fn" value="${esc(pname)}" autocomplete="off" placeholder="ex. Poulet rôti"></label>
   <fieldset><legend>Catégorie</legend><div class="seg" id="ori"></div></fieldset>
-  <fieldset><legend>Magasin <span class="muted">(pour un plat tout fait)</span></legend><div id="pshop"></div></fieldset>
+  <fieldset><legend>Magasin <span class="muted">(optionnel)</span></legend><div id="pshop"></div></fieldset>
   <fieldset><legend>Plutôt pour</legend><div class="seg" id="mom"></div></fieldset>
   <fieldset><legend>Pour qui</legend><div id="pmem"></div></fieldset>
   <fieldset><legend>Type de plat</legend><div class="togs" id="cats"></div>
