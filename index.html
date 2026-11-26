@@ -240,7 +240,7 @@ function loginSheet(msg){openSheet(`<h2>Connexion</h2><p class="muted" style="ma
 
 
 /* ---------- mise à jour des aliments (audit du 26/11) ---------- */
-const MIG_LAST=21;
+const MIG_LAST=22;
 function migrate(){if((S.mig||0)>=MIG_LAST||!S.aliments.length)return false;S.mig=S.mig||0;
   if(S.mig<2){
   const find=n=>S.aliments.find(a=>norm(a.name)===norm(n));
@@ -317,6 +317,7 @@ function migrate(){if((S.mig||0)>=MIG_LAST||!S.aliments.length)return false;S.mi
     for(const k of Object.keys(S.planning)){const day=S.planning[k];if(!day||typeof day!=='object'){delete S.planning[k];continue}for(const m of ['midi','soir']){const l=fr(day[m]);if(l.length)day[m]=l;else delete day[m]}if(!Object.keys(day).length)delete S.planning[k]}
     for(const w of S.weeks)w.days=w.days.map(d=>{const o={};for(const m of ['midi','soir']){const l=fr(d&&d[m]);if(l.length)o[m]=l}return o});
     S.mig=21}
+  if(S.mig<22){if(!S.shops.includes('Franprix'))S.shops.push('Franprix');for(const x of [...S.aliments,...S.plats])if(/babybel/.test(norm(x.name)))x.shop='Franprix';S.mig=22}
   return true}
 
 /* ---------- sheets & toast ---------- */
