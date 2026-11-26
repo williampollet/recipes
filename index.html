@@ -240,7 +240,8 @@ function loginSheet(msg){openSheet(`<h2>Connexion</h2><p class="muted" style="ma
 
 
 /* ---------- mise à jour des aliments (audit du 26/11) ---------- */
-function migrate(){if((S.mig||0)>=16||!S.aliments.length)return false;S.mig=S.mig||0;
+const MIG_LAST=20;
+function migrate(){if((S.mig||0)>=MIG_LAST||!S.aliments.length)return false;S.mig=S.mig||0;
   if(S.mig<2){
   const find=n=>S.aliments.find(a=>norm(a.name)===norm(n));
   const setType=(n,t)=>{const a=find(n);if(a)a.type=t};
@@ -302,6 +303,16 @@ function migrate(){if((S.mig||0)>=16||!S.aliments.length)return false;S.mig=S.mi
       for(const r of S.repas)for(const s in r.slots||{})if(r.slots[s]?.k==='a'&&r.slots[s].id===a)r.slots[s].id=b;
       S.aliments=S.aliments.filter(x=>x!==lig)}
     S.mig=19}
+  if(S.mig<20){const key=n=>norm(n).replace(/œ/g,'oe').replace(/\s*\(pates\)$/,'');
+    const remap=(a,b)=>{for(const p of S.plats){if(p.alimentIds.includes(a)){p.alimentIds=p.alimentIds.filter(x=>x!==a);if(!p.alimentIds.includes(b))p.alimentIds.push(b)}if(p.qty&&p.qty[a]!=null){if(p.qty[b]==null)p.qty[b]=p.qty[a];delete p.qty[a]}}
+      for(const r of S.repas)for(const s in r.slots||{})if(r.slots[s]?.k==='a'&&r.slots[s].id===a)r.slots[s].id=b};
+    const groups=new Map();for(const a of S.aliments){const k=key(a.name);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(a)}
+    const score=a=>(a.shop?2:0)+(/^[A-ZÀ-ÖØ-Þ]/.test(a.name)?1:0)+(/\(pâtes\)$/.test(a.name)?4:0)-(/œ/i.test(a.name)?8:0);
+    const drop=new Set();
+    for(const g of groups.values())if(g.length>1){const keep=[...g].sort((x,y)=>score(y)-score(x))[0];for(const a of g)if(a!==keep){keep.type=keep.type||a.type;keep.shop=keep.shop||a.shop;remap(a.id,keep.id);drop.add(a)}}
+    S.aliments=S.aliments.filter(a=>!drop.has(a));
+    for(const a of S.aliments){const k=key(a.name);if(/^(concasse de tomates|coquillettes|beurre|oeufs?|sardines?)$/.test(k)){a.shop='Bio c’ Bon';a.name=a.name.charAt(0).toUpperCase()+a.name.slice(1);if(k==='coquillettes'&&!/\(pâtes\)$/.test(a.name))a.name='Coquillettes (pâtes)'}}
+    S.mig=20}
   return true}
 
 /* ---------- sheets & toast ---------- */
