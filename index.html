@@ -455,9 +455,10 @@ const entriesAt=v=>(Array.isArray(v)?v:typeof v==='string'?[v]:[]).map(normEntry
 const entryMembers=e=>(e.members||R(e.r)?.members||[]).filter(M);
 const sameSlots=(a,b)=>JSON.stringify(cleanSlots(a))===JSON.stringify(cleanSlots(b));
 const mainSlot=e=>e.slots.plat?'plat':SLOTS.map(([s])=>s).find(s=>e.slots[s]);
-const entryName=e=>refName(e.slots[mainSlot(e)])||'Repas';
 const lc=t=>t.charAt(0).toLowerCase()+t.slice(1);
-const entryRest=e=>{const ms=mainSlot(e);return SLOTS.map(([s])=>s!==ms?refName(e.slots[s]):'').filter(Boolean).map(lc).join(' · ')};
+const withProt=e=>mainSlot(e)!=='proteine'&&!!refName(e.slots.proteine);
+const entryName=e=>(refName(e.slots[mainSlot(e)])||'Repas')+(withProt(e)?' + '+lc(refName(e.slots.proteine)):'');
+const entryRest=e=>{const ms=mainSlot(e);return SLOTS.map(([s])=>s!==ms&&!(s==='proteine'&&withProt(e))?refName(e.slots[s]):'').filter(Boolean).map(lc).join(' · ')};
 const idsAt=v=>entriesAt(v).map(e=>e.id);
 const slotEntries=(k,m)=>entriesAt(S.planning[k]?.[m]);
 const slotList=(k,m)=>idsAt(S.planning[k]?.[m]);
