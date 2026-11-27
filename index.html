@@ -330,7 +330,8 @@ function migrate(){if((S.mig||0)>=MIG_LAST||!S.aliments.length)return false;S.mi
 /* ---------- sheets & toast ---------- */
 const L1=$('#layer1'),L2=$('#layer2'),S1=$('#sheet1'),S2=$('#sheet2');
 function openSheet(html,mount,lvl=1){const L=lvl===2?L2:L1,el=lvl===2?S2:S1;if(lvl===1&&!L2.hidden)closeSheet(2);el.onclick=null;el.innerHTML=html;L.hidden=false;document.body.classList.add('lock');el.scrollTop=0;mount&&mount(el);const sq=el.querySelector('input[type=search]:not(#aq)');if(sq)try{sq.focus({preventScroll:true})}catch(e){}}
-function closeSheet(lvl){(lvl===2?L2:L1).hidden=true;if(lvl===1)L2.hidden=true;if(L1.hidden&&L2.hidden)document.body.classList.remove('lock')}
+let sheetBack=null;// rouvre une fenêtre (ex. le créneau du planning) après la fiche ouverte depuis elle
+function closeSheet(lvl){(lvl===2?L2:L1).hidden=true;if(lvl===1)L2.hidden=true;if(L1.hidden&&L2.hidden)document.body.classList.remove('lock');if(lvl===1&&sheetBack){const b=sheetBack;sheetBack=null;setTimeout(b,0)}}
 const closeTop=()=>closeSheet(L2.hidden?1:2);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!(L1.hidden&&L2.hidden))closeTop()});
 let tt;function toast(msg,undo){const el=$('#toast');el.innerHTML=`<span>${esc(msg)}</span>${undo?'<button type="button" id="undo">Annuler</button>':''}`;el.hidden=false;clearTimeout(tt);tt=setTimeout(()=>el.hidden=true,undo?7000:2200);if(undo)$('#undo').onclick=()=>{undo();el.hidden=true}}
@@ -510,7 +511,7 @@ function planPick(k,m){const label=`${m==='midi'?'Midi':'Soir'}, ${fromKey(k).to
     root.onclick=e=>{const em=e.target.closest('[data-emem]');if(em){const [eid,mid]=em.dataset.emem.split('|');upd(eid,x=>{const set=new Set(x.members);set.has(mid)?set.delete(mid):set.add(mid);x.members=[...set];return x});return}
       const es=e.target.closest('[data-eslot]');if(es){const [eid,slot]=es.dataset.eslot.split('|');
         if(eid==='draft'){slotPicker(slot,draft,()=>{if(Object.keys(cleanSlots(draft.slots)).length){const d=draft;draft=null;save([...slotEntries(k,m),{...d,members:[]}])}else draw()});return}
-        const x=slotEntries(k,m).find(y=>y.id===eid);if(!x)return;const d={slots:{...x.slots}};slotPicker(slot,d,()=>upd(eid,y=>{y.slots=d.slots;return y}));return}
+        const x=slotEntries(k,m).find(y=>y.id===eid);if(!x)return;const ref=x.slots[slot];if(ref&&refObj(ref)){sheetBack=()=>planPick(k,m);if(ref.k==='p')platForm(ref.id);else alimentForm(ref.id);return}const d={slots:{...x.slots}};slotPicker(slot,d,()=>upd(eid,y=>{y.slots=d.slots;return y}));return}
       const ec=e.target.closest('[data-eclear]');if(ec){const [eid,slot]=ec.dataset.eclear.split('|');if(eid==='draft'){delete draft.slots[slot];draw();return}
         const x=slotEntries(k,m).find(y=>y.id===eid);if(x&&Object.keys(x.slots).length<=1){toast('Retire le repas avec × en haut de sa carte');return}upd(eid,y=>{delete y.slots[slot];return y});return}
       const ed=e.target.closest('[data-edel]');if(ed){const id=ed.dataset.edel;closeSheet(1);withUndo('Repas retiré du créneau',()=>{assign(k,m,slotEntries(k,m).filter(x=>x.id!==id));S.restes=S.restes.filter(x=>!(x.rid===id&&x.from.k===k&&x.from.m===m))});planPick(k,m);return}
@@ -685,7 +686,7 @@ function drawList(){const el=$('#list');if(el)el.innerHTML=V[route].list()}
 function render(){const v=V[route];$('#title').textContent=v.title;$('#sub').textContent=v.sub();document.title=v.title+' · Kitchen Planner';
   document.querySelectorAll('nav.tabs a').forEach(a=>a.dataset.r===route?a.setAttribute('aria-current','page'):a.removeAttribute('aria-current'));
   $('#fab').hidden=route==='planning';$('#main').innerHTML=v.shell();drawList()}
-window.addEventListener('hashchange',()=>{ui.mem='';const r=location.hash.slice(1);route=V[r]?r:'planning';closeSheet(1);render();window.scrollTo(0,0)});
+window.addEventListener('hashchange',()=>{sheetBack=null;ui.mem='';const r=location.hash.slice(1);route=V[r]?r:'planning';closeSheet(1);render();window.scrollTo(0,0)});
 document.addEventListener('input',e=>{if(e.target.id==='q'){ui.q[route]=e.target.value;drawList()}});
 document.addEventListener('change',e=>{if(e.target.id==='alf'){ui.al=e.target.value;drawList()}});
 document.addEventListener('click',e=>{const t=e.target.closest('[data-close],button,a');if(!t)return;const ds=t.dataset;
