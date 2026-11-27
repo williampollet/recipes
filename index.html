@@ -258,7 +258,7 @@ function loginSheet(msg){openSheet(`<h2>Connexion</h2><p class="muted" style="ma
 
 
 /* ---------- mise à jour des aliments (audit du 26/11) ---------- */
-const MIG_LAST=28;
+const MIG_LAST=29;
 function migrate(){if((S.mig||0)>=MIG_LAST||!S.aliments.length)return false;S.mig=S.mig||0;
   if(S.mig<2){
   const find=n=>S.aliments.find(a=>norm(a.name)===norm(n));
@@ -357,6 +357,13 @@ function migrate(){if((S.mig||0)>=MIG_LAST||!S.aliments.length)return false;S.mi
   if(S.mig<28){// poids d'une pièce pré-rempli pour les aliments comptés à la pièce
     for(const a of S.aliments)if(!a.pw&&!PINCH(a)){const w=pieceW({name:a.name});if(w)a.pw=w}
     S.mig=28}
+  if(S.mig<29){// poisson pané et nuggets de poulet : aliments (protéines)
+    const sw=(pid,aid)=>{const fx=sl=>{for(const k in sl||{})if(sl[k]?.k==='p'&&sl[k].id===pid)sl[k]={k:'a',id:aid}};S.repas.forEach(r=>fx(r.slots));for(const k in S.planning)for(const m in S.planning[k])(Array.isArray(S.planning[k][m])?S.planning[k][m]:[]).forEach(e=>e&&typeof e==='object'&&fx(e.slots));S.weeks.forEach(w=>w.days.forEach(d=>{for(const m in d||{})(Array.isArray(d[m])?d[m]:[]).forEach(e=>e&&typeof e==='object'&&fx(e.slots))}));if(S.stock&&S.stock['p:'+pid]){S.stock['a:'+aid]=S.stock['p:'+pid];delete S.stock['p:'+pid]}};
+    for(const [re,name,shop] of [[/^poisson pane/,'Poisson pané','Picard'],[/^nuggets?( de poulet)?$|nugget/,'Nuggets de poulet','']]){
+      const ps=S.plats.filter(p=>re.test(norm(p.name)));let a=S.aliments.find(x=>re.test(norm(x.name)));
+      if(!a){a={id:uid(),name,type:'proteine',shop:(ps[0]&&ps[0].shop)||shop,emoji:''};S.aliments.push(a)}
+      for(const p of ps){a.shop=a.shop||p.shop||'';sw(p.id,a.id);S.plats=S.plats.filter(x=>x!==p)}}
+    S.mig=29}
   return true}
 
 /* ---------- sheets & toast ---------- */
