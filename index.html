@@ -611,25 +611,23 @@ const tplDesc=w=>w.days.map((d,i)=>{const x=MOMENTS.flatMap(([m])=>{const l=entr
 const tplList=(act)=>S.weeks.length?byName(S.weeks).map(w=>`<li class="rowwrap"><button type="button" class="row" data-${act}="${esc(w.id)}"><span class="rmain"><strong>${esc(w.name)} <span class="cat">${tplLen(w)}</span></strong><span class="desc">${esc(tplDesc(w))}</span></span></button><button type="button" class="starbtn" data-wdel="${esc(w.id)}" aria-label="Supprimer le modèle ${esc(w.name)}">×</button></li>`).join(''):'<p class="muted" style="margin:0">Aucun modèle pour l’instant.</p>';
 function delTpl(t,redraw){const w=S.weeks.find(x=>x.id===t.dataset.wdel);if(!w)return;if(t.dataset.armed){withUndo('Modèle supprimé',()=>{S.weeks=S.weeks.filter(x=>x.id!==w.id)});redraw()}else{t.dataset.armed='1';t.textContent='✓';t.setAttribute('aria-label','Confirmer la suppression')}}
 function saveTpl(name,tpl){const ex=S.weeks.find(w=>norm(w.name)===norm(name));const v={days:tpl.days,restes:tpl.restes};if(tpl.slots)v.slots=tpl.slots;if(ex){Object.assign(ex,v);if(!tpl.slots)delete ex.slots}else S.weeks.push({id:uid(),name,...v});persist();return ex}
-function daySheet(k){const label=fromKey(k).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});const keys=daysFrom(k,7);const sel=new Set(['0|midi','0|soir']);
-  openSheet(`<h2>${esc(label)}</h2><p class="muted" style="margin:0">Choisis les créneaux à copier ou enregistrer, par exemple mercredi midi et jeudi soir. Les restes entre ces créneaux sont gardés.</p>
-  <h3>Créneaux</h3><div id="dg"></div><p class="muted" id="dsum" style="margin:6px 0 0;font-size:14px"></p>
+function daySheet(k){const label=fromKey(k).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});let n=1;
+  openSheet(`<h2>${esc(label)}</h2><p class="muted" style="margin:0">Copie, colle, vide ou enregistre ce jour, ou plusieurs jours à partir de lui. Les restes entre ces jours suivent.</p>
+  <h3>À partir d’ici, combien de jours ?</h3><div class="seg" id="dn"></div><p class="muted" id="dsum" style="margin:6px 0 0;font-size:14px"></p>
   <div class="seg" style="margin-top:10px"><button type="button" class="ghost" id="dc">Copier</button>${clip?`<button type="button" class="ghost" id="dp">Coller ici (${tplLen(clip)})</button>`:''}<button type="button" class="ghost" id="dx">Vider</button></div>
-  <h3>Enregistrer comme modèle</h3><div class="addtype"><input id="dname" placeholder="ex. Gratin + reste de Delphine" autocomplete="off" aria-label="Nom du modèle"><button type="button" class="primary" id="ds">Enregistrer</button></div><p class="err" id="de" role="alert"></p>
+  <h3>Enregistrer comme modèle</h3><div class="addtype"><input id="dname" placeholder="ex. Lundi-mardi avec restes" autocomplete="off" aria-label="Nom du modèle"><button type="button" class="primary" id="ds">Enregistrer</button></div><p class="err" id="de" role="alert"></p>
   <h3>Appliquer un modèle à partir d’ici</h3><ul class="list" id="dl"></ul>
   <div class="actions"><button type="button" class="ghost" data-close>Fermer</button></div>`,root=>{
-    const list=()=>[...sel].map(x=>{const [d,m]=x.split('|');return [+d,m]});
-    const draw=()=>{root.querySelector('#dg').innerHTML=keys.map((kk,i)=>`<div class="slotpick"><span>${esc(fromKey(kk).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric'}))}</span>${MOMENTS.map(([m,ml])=>{const n=slotEntries(kk,m).length;return `<button type="button" class="tog" data-ds="${i}|${m}" aria-pressed="${sel.has(i+'|'+m)}">${ml}${n?` <span class="muted">· ${n}</span>`:''}</button>`}).join('')}</div>`).join('');
-      if(!sel.size){root.querySelector('#dsum').textContent='Choisis au moins un créneau.';}else{const t=readSlots(k,list()),c=tplCount(t);root.querySelector('#dsum').textContent=c?`${c} repas${t.restes.length?` et ${t.restes.length} reste${t.restes.length>1?'s':''}`:''} dans ${sel.size} créneau${sel.size>1?'x':''}`:'Rien de prévu sur ces créneaux.'}
+    const draw=()=>{root.querySelector('#dn').innerHTML=[1,2,3,7].map(i=>`<button type="button" class="tog" data-dn="${i}" aria-pressed="${n===i}">${i===7?'7 jours':i+' jour'+(i>1?'s':'')}</button>`).join('');
+      const t=readDays(k,n),c=tplCount(t);root.querySelector('#dsum').textContent=c?`${c} repas${t.restes.length?` et ${t.restes.length} reste${t.restes.length>1?'s':''}`:''}`:'Rien de prévu sur ces jours.';
       root.querySelector('#dl').innerHTML=tplList('dapply')};
     draw();
     root.onclick=e=>{const t=e.target.closest('button');if(!t)return;
-      if(t.dataset.ds){sel.has(t.dataset.ds)?sel.delete(t.dataset.ds):sel.add(t.dataset.ds);draw();return}
-      const need=()=>{if(sel.size)return true;root.querySelector('#dsum').textContent='Choisis au moins un créneau.';return false};
-      if(t.id==='dc'){if(!need())return;clip=readSlots(k,list());closeSheet(1);render();toast(`Copié (${tplLen(clip)}) : ouvre un autre jour et colle`);return}
+      if(t.dataset.dn){n=+t.dataset.dn;draw();return}
+      if(t.id==='dc'){clip=readDays(k,n);closeSheet(1);render();toast(`Copié (${tplLen(clip)}) : ouvre un autre jour et colle`);return}
       if(t.id==='dp'&&clip){const c=clip;closeSheet(1);withUndo(`Collé (${tplLen(c)})`,()=>writeDays(k,c));return}
-      if(t.id==='dx'){if(!need())return;const c=readSlots(0||k,list()),d0=Math.min(...list().map(x=>x[0]));closeSheet(1);withUndo('Créneaux vidés',()=>writeDays(keys[d0],{days:c.days.map(()=>({})),restes:[],slots:c.slots}));return}
-      if(t.id==='ds'){if(!need())return;const name=root.querySelector('#dname').value.trim();if(!name){root.querySelector('#de').textContent='Donne un nom au modèle.';return}const tpl=readSlots(k,list());if(!tplCount(tpl)){root.querySelector('#de').textContent='Rien à enregistrer sur ces créneaux.';return}const ex=saveTpl(name,tpl);closeSheet(1);toast(ex?'Modèle mis à jour':'Modèle enregistré');return}
+      if(t.id==='dx'){closeSheet(1);withUndo(n>1?`${n} jours vidés`:'Jour vidé',()=>writeDays(k,{days:[...Array(n)].map(()=>({})),restes:[]}));return}
+      if(t.id==='ds'){const name=root.querySelector('#dname').value.trim();if(!name){root.querySelector('#de').textContent='Donne un nom au modèle.';return}const tpl=readDays(k,n);if(!tplCount(tpl)){root.querySelector('#de').textContent='Rien à enregistrer sur ces jours.';return}const ex=saveTpl(name,tpl);closeSheet(1);toast(ex?'Modèle mis à jour':'Modèle enregistré');return}
       if(t.dataset.dapply){const w=S.weeks.find(x=>x.id===t.dataset.dapply);if(w){closeSheet(1);withUndo(`Modèle « ${w.name} » appliqué`,()=>writeDays(k,w))}return}
       if(t.dataset.wdel){delTpl(t,draw)}}})}
 function weekSheet(){const cur=readWeek(ui.week),n=tplCount(cur);
