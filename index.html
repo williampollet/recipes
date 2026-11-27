@@ -70,7 +70,7 @@ h2{font-size:24px;line-height:1.15;margin:0 0 4px}h3{font-size:17px;margin:20px 
 .weeknav>div{flex:1;text-align:center;display:flex;flex-direction:column}
 .weeknav>button{width:46px;height:46px;border-radius:50%;border:1.5px solid var(--line);background:var(--card);font-size:22px}
 .link{border:0;background:none;color:var(--acc);text-decoration:underline;padding:4px;font-size:14px}
-.who{font-size:12px;font-weight:500;color:#fff;background:#7b5cc4;border-radius:6px;padding:1px 7px;vertical-align:2px;margin-left:6px;white-space:nowrap}
+.who{font-size:12px;font-weight:500;color:#fff;background:#7b5cc4;border-radius:6px;padding:1px 7px;vertical-align:2px;margin-left:6px;white-space:nowrap}.who+.who{margin-left:4px}
 .cklist{list-style:none;margin:0;padding:0;display:grid;gap:6px}.cklist li{display:flex;gap:8px}
 .ck{flex:1;display:flex;align-items:center;gap:12px;min-height:48px;padding:6px 14px;background:var(--card);border:1px solid var(--line);border-radius:12px;font-weight:400;margin:0;cursor:pointer}.ck input{width:22px;height:22px;min-height:0;margin:0;accent-color:var(--acc);flex:none}.ck span:first-of-type{flex:1}.ck.done span:first-of-type{text-decoration:line-through;color:var(--mute)}
 .qty{display:inline-flex;gap:6px}.qty input{width:90px}.qty select{width:auto}
@@ -150,7 +150,10 @@ const WHO=[['commun','Commun'],['enfant','Enfant']];const WL=Object.fromEntries(
 const M=id=>S.members.find(m=>m.id===id);
 const forTxt=list=>{const ms=(list||[]).map(M).filter(Boolean);return ms.length&&(ms.length<S.members.length||S.members.length===1)?ms.map(m=>m.name).join(', '):''};
 const momHtml=r=>r&&r.moment?` <span class="cat">${ML[r.moment]}</span>`:'';
-const tagHtml=t=>t?` <span class="who">${esc(t)}</span>`:'';
+// une couleur par personne, dans l'ordre de la famille
+const MCOL=['#7b5cc4','#1f8a7a','#d0603f','#3f6fd0','#c2468a','#9a7a12'];
+const memCol=n=>{const i=S.members.findIndex(m=>m.name===n);return i<0?'':MCOL[i%MCOL.length]};
+const tagHtml=t=>t?' '+String(t).split(', ').map(n=>{const c=memCol(n);return `<span class="who"${c?` style="background:${c}"`:''}>${esc(n)}</span>`}).join(''):'';
 const whoTag=r=>tagHtml(forTxt(r.members)||(!(r.members||[]).length&&r.who==='enfant'?'Enfant':''));
 const portions=list=>{const ms=(list||[]).map(M).filter(Boolean);const all=ms.length?ms:S.members;return all.length?all.reduce((n,m)=>n+(m.kind==='enfant'?.5:1),0):1};
 const fmtQ=(n,u)=>{if(u==='g'&&n>=1000)return (Math.round(n/100)/10).toLocaleString('fr-FR')+' kg';if(u==='ml'&&n>=1000)return (Math.round(n/100)/10).toLocaleString('fr-FR')+' l';const v=u==='g'||u==='ml'?Math.round(n):u==='pièce'?Math.ceil(n-1e-9):Math.ceil(n*2)/2;return v.toLocaleString('fr-FR')+' '+(u==='pièce'&&v>1?'pièces':u==='tranche'&&v>1?'tranches':u)};
