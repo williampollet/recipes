@@ -152,7 +152,7 @@ const forTxt=list=>{const ms=(list||[]).map(M).filter(Boolean);return ms.length&
 const tagHtml=t=>t?` <span class="who">${esc(t)}</span>`:'';
 const whoTag=r=>tagHtml(forTxt(r.members)||(!(r.members||[]).length&&r.who==='enfant'?'Enfant':''));
 const portions=list=>{const ms=(list||[]).map(M).filter(Boolean);const all=ms.length?ms:S.members;return all.length?all.reduce((n,m)=>n+(m.kind==='enfant'?.5:1),0):1};
-const fmtQ=(n,u)=>{if(u==='g'&&n>=1000)return (Math.round(n/100)/10).toLocaleString('fr-FR')+' kg';if(u==='ml'&&n>=1000)return (Math.round(n/100)/10).toLocaleString('fr-FR')+' l';const v=u==='g'||u==='ml'?Math.round(n):Math.ceil(n*2)/2;return v.toLocaleString('fr-FR')+' '+(u==='pièce'&&v>1?'pièces':u==='tranche'&&v>1?'tranches':u)};
+const fmtQ=(n,u)=>{if(u==='g'&&n>=1000)return (Math.round(n/100)/10).toLocaleString('fr-FR')+' kg';if(u==='ml'&&n>=1000)return (Math.round(n/100)/10).toLocaleString('fr-FR')+' l';const v=u==='g'||u==='ml'?Math.round(n):u==='pièce'?Math.ceil(n-1e-9):Math.ceil(n*2)/2;return v.toLocaleString('fr-FR')+' '+(u==='pièce'&&v>1?'pièces':u==='tranche'&&v>1?'tranches':u)};
 const qtyInput=(key,q)=>`<span class="qty"><input type="number" inputmode="decimal" min="0" step="any" data-qn="${esc(key)}" value="${q?q.n:''}" placeholder="—" aria-label="Quantité"><select data-qu="${esc(key)}" aria-label="Unité">${UNITS.map(u=>`<option${q&&q.u===u?' selected':''}>${u}</option>`).join('')}</select></span>`;
 const readQty=(root,key)=>{const n=root.querySelector(`[data-qn="${key}"]`),u=root.querySelector(`[data-qu="${key}"]`);return n&&u?qOk({n:parseFloat(String(n.value).replace(',','.')),u:u.value}):undefined};
 const allShops=()=>{const set=new Set([...SHOPS,...S.shops]);for(const x of [...S.aliments,...S.plats])if(x.shop)set.add(x.shop);return [...set]};
@@ -241,7 +241,7 @@ function loginSheet(msg){openSheet(`<h2>Connexion</h2><p class="muted" style="ma
 
 
 /* ---------- mise à jour des aliments (audit du 26/11) ---------- */
-const MIG_LAST=23;
+const MIG_LAST=24;
 function migrate(){if((S.mig||0)>=MIG_LAST||!S.aliments.length)return false;S.mig=S.mig||0;
   if(S.mig<2){
   const find=n=>S.aliments.find(a=>norm(a.name)===norm(n));
@@ -322,6 +322,9 @@ function migrate(){if((S.mig||0)>=MIG_LAST||!S.aliments.length)return false;S.mi
   if(S.mig<23){const c=S.aliments.find(x=>norm(x.name)==='compote de pomme'),g=S.aliments.find(x=>norm(x.name)==='compote en gourde');
     if(c&&g){for(const p of S.plats){if(p.alimentIds.includes(c.id)){p.alimentIds=p.alimentIds.filter(x=>x!==c.id);if(!p.alimentIds.includes(g.id))p.alimentIds.push(g.id)}}const fix=sl=>{for(const s in sl||{})if(sl[s]?.k==='a'&&sl[s].id===c.id)sl[s].id=g.id};S.repas.forEach(r=>fix(r.slots));for(const k in S.planning)for(const m in S.planning[k])(Array.isArray(S.planning[k][m])?S.planning[k][m]:[]).forEach(e=>e&&fix(e.slots));S.weeks.forEach(w=>w.days.forEach(d=>{for(const m in d)(d[m]||[]).forEach(e=>e&&fix(e.slots))}));g.shop=g.shop||c.shop;S.aliments=S.aliments.filter(x=>x!==c)}
     else if(c)c.name='Compote en gourde';S.mig=23}
+  if(S.mig<24){const P={'clementine':[2,'pièce'],'abricot':[3,'pièce'],'kiwi':[1,'pièce'],'mangue':[0.5,'pièce'],'melon':[0.25,'pièce'],'fraise':[150,'g'],'fraises':[150,'g'],'framboise':[125,'g'],'framboises':[125,'g'],'raisin':[150,'g'],'raisins':[150,'g']};
+    for(const a of S.aliments){const n=norm(a.name);const p=P[n]||P[n.replace(/s$/,'')];if(p)a.qty={n:p[0],u:p[1]};else if((a.type==='fruit'||/compote/.test(n))&&!a.qty)a.qty={n:1,u:'pièce'}}
+    S.mig=24}
   return true}
 
 /* ---------- sheets & toast ---------- */
