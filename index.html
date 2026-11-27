@@ -634,7 +634,7 @@ function daySheet(k){const label=fromKey(k).toLocaleDateString('fr-FR',{weekday:
       if(t.dataset.wdel){delTpl(t,draw)}}})}
 function weekSheet(){const cur=readWeek(ui.week),n=tplCount(cur);
   openSheet(`<h2>Modèles et copier / coller</h2><p class="muted" style="margin:0">Pour la semaine affichée (${n} repas prévus). Pour un ou deux jours, touche ⋯ à côté du jour.</p>
-  <h3>Copier / coller</h3><div class="seg"><button type="button" class="ghost" id="wc" ${n?'':'disabled'}>Copier cette semaine</button><button type="button" class="ghost" id="wp" ${clip?'':'disabled'}>Coller ${clip?`(${tplLen(clip)}) à partir de lundi`:''}</button><button type="button" class="ghost" id="wx" ${n?'':'disabled'}>Vider la semaine</button></div>
+  <h3>Copier / coller</h3><div class="seg"><button type="button" class="ghost" id="wc" ${n?'':'disabled'}>Copier cette semaine</button><button type="button" class="ghost" id="wp" ${clip?'':'disabled'}>Coller ${clip?`(${tplLen(clip)}) à partir de lundi`:''}</button></div>
   <h3>Enregistrer comme modèle</h3><div class="addtype"><input id="wn" placeholder="ex. Semaine classique" autocomplete="off" aria-label="Nom du modèle"><button type="button" class="primary" id="ws" ${n?'':'disabled'}>Enregistrer</button></div><p class="err" id="we" role="alert"></p>
   <h3>Appliquer un modèle à partir de lundi</h3><ul class="list" id="wl"></ul>
   <div class="actions"><button type="button" class="ghost" data-close>Fermer</button></div>`,root=>{
@@ -643,7 +643,6 @@ function weekSheet(){const cur=readWeek(ui.week),n=tplCount(cur);
     root.onclick=e=>{const t=e.target.closest('button');if(!t)return;
       if(t.id==='wc'){clip=cur;closeSheet(1);render();toast('Semaine copiée : va sur une autre semaine et colle-la');return}
       if(t.id==='wp'&&clip){closeSheet(1);writeWeek(ui.week,clip,'Collé');return}
-      if(t.id==='wx'){closeSheet(1);writeWeek(ui.week,null,'Semaine vidée');return}
       if(t.id==='ws'){const name=root.querySelector('#wn').value.trim();if(!name){root.querySelector('#we').textContent='Donne un nom au modèle.';return}
         const ex=saveTpl(name,cur);closeSheet(1);toast(ex?'Modèle mis à jour':'Modèle enregistré');return}
       if(t.dataset.wapply){const w=S.weeks.find(x=>x.id===t.dataset.wapply);if(w){closeSheet(1);writeWeek(ui.week,w,`Modèle « ${w.name} » appliqué`)}return}
