@@ -470,13 +470,13 @@ function platForm(id,preset){const p=id?P(id):null;const d={al:new Set(p?p.alime
       persist();closeSheet(1);render();toast(cur?'Plat modifié':'Plat ajouté')}})}
 
 /* ---------- repas form & slot picker ---------- */
-function repasForm(id,onSaved){const r=id?R(id):null;const d={cond:new Set(r?.cond||[]),moment:r?.moment||'',slots:JSON.parse(JSON.stringify(r?.slots||{})),who:r?.who||'commun',mem:new Set(r?.members?.length?r.members:(r?.who==='enfant'?S.members.filter(m=>m.kind==='enfant').map(m=>m.id):[]))};let armed=false;
+function repasForm(id,onSaved,draft){const r=id?R(id):null;const d=draft||{cond:new Set(r?.cond||[]),moment:r?.moment||'',slots:JSON.parse(JSON.stringify(r?.slots||{})),who:r?.who||'commun',mem:new Set(r?.members?.length?r.members:(r?.who==='enfant'?S.members.filter(m=>m.kind==='enfant').map(m=>m.id):[]))};let armed=false;
   openSheet(`<h2>${r?'Modifier le repas':'Nouveau repas'}</h2><p class="muted" style="margin:0 0 12px">Chaque case peut être un aliment ou un plat.</p><form id="f" novalidate>
   <fieldset style="margin:0 0 14px"><legend>Pour qui par défaut <span class="muted">(pré-coché dans le planning, modifiable chaque jour)</span></legend><div class="seg" id="who"></div></fieldset>
   <fieldset style="margin:0 0 14px"><legend>Moment</legend><div class="seg" id="rmom"></div></fieldset>
   <div id="slots"></div>
   <div class="condrow" id="rcond"></div>
-  <label>Nom du repas <span class="muted">(facultatif)</span><input id="fn" value="${esc(r?.name||'')}" autocomplete="off"></label>
+  <label>Nom du repas <span class="muted">(facultatif)</span><input id="fn" value="${esc(d.name??r?.name??'')}" autocomplete="off"></label>
   <p class="err" id="fe" role="alert"></p>
   <div class="actions">${r?'<button type="button" class="danger" id="fd">Supprimer</button>':''}<button type="button" class="ghost" data-close>Annuler</button><button class="primary">Enregistrer</button></div></form>`,root=>{
     const draw=()=>{root.querySelector('#slots').innerHTML=SLOTS.map(([s,l])=>{const o=refObj(d.slots[s]);
@@ -490,7 +490,7 @@ function repasForm(id,onSaved){const r=id?R(id):null;const d={cond:new Set(r?.co
       const mo=e.target.closest('[data-rmom]');if(mo){d.moment=d.moment===mo.dataset.rmom?'':mo.dataset.rmom;drawMom();return}
       const wb=e.target.closest('[data-who]');if(wb){d.who=wb.dataset.who;drawWho();return}
       const mb=e.target.closest('[data-mem]');if(mb){const i=mb.dataset.mem;d.mem.has(i)?d.mem.delete(i):d.mem.add(i);drawWho();return}
-      const s=e.target.closest('[data-slot]');if(s){slotPicker(s.dataset.slot,d,draw);return}
+      const s=e.target.closest('[data-slot]');if(s){const ref=d.slots[s.dataset.slot];if(ref&&refObj(ref)){d.name=root.querySelector('#fn').value;sheetBack=()=>repasForm(id,onSaved,d);if(ref.k==='p')platForm(ref.id);else alimentForm(ref.id);return}slotPicker(s.dataset.slot,d,draw);return}
       const c=e.target.closest('[data-clear]');if(c){delete d.slots[c.dataset.clear];draw();return}
       if(e.target.id==='fd'){if(!armed){armed=true;e.target.textContent='Confirmer la suppression';return}closeSheet(1);delRepas(id)}};
     root.querySelector('#f').onsubmit=e=>{e.preventDefault();const slots={};for(const [s] of SLOTS)if(refObj(d.slots[s]))slots[s]={k:d.slots[s].k,id:d.slots[s].id};
