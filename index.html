@@ -19,7 +19,7 @@
    PICTURE: the working lists themselves (aliments by colour, plats, repas, the week).
    COLOUR and TYPE: saffron band, warm white ground, tomato accent; five food colours; Rubik.
    LAYOUT: one column up to 760px, bottom tab bar, sheets that slide up for every form. */
-:root{color-scheme:light;--bg:#f4f8f2;--ink:#17261c;--mute:#5f6f63;--card:#ffffff;--line:#dbe6d9;--band:#2f8f55;--bandink:#ffffff;--acc:#1f7a44;--danger:#c8372d;--legume:#3d9a4a;--feculent:#c08a1c;--fruit:#ec7420;--laitage:#3f7fc4;--proteine:#c43c3c;--legumineuse:#8a5a2b;--epice:#2b8a8a;--condiment:#9a6b1f;--star:#f0a800}
+:root{color-scheme:light;--bg:#f4f8f2;--ink:#17261c;--mute:#5f6f63;--card:#ffffff;--line:#dbe6d9;--band:#2f8f55;--bandink:#ffffff;--acc:#1f7a44;--danger:#c8372d;--legume:#3d9a4a;--feculent:#c08a1c;--fruit:#ec7420;--laitage:#3f7fc4;--proteine:#c43c3c;--legumineuse:#8a5a2b;--epice:#2b8a8a;--condiment:#9a6b1f;--sucre:#b4507a;--star:#f0a800}
 :root[data-theme]{color-scheme:light}
 *{box-sizing:border-box;min-width:0}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Rubik,system-ui,sans-serif;overflow-x:clip;padding-bottom:calc(150px + env(safe-area-inset-bottom))}
@@ -46,7 +46,7 @@ h2{font-size:24px;line-height:1.15;margin:0 0 4px}h3{font-size:17px;margin:20px 
 .fchip[aria-pressed=true],.tog[aria-pressed=true]{border-color:var(--c,var(--ink));background:color-mix(in srgb,var(--c,var(--ink)) 18%,var(--card));font-weight:500}
 .emo{font-size:20px;line-height:1;flex:none;width:26px;text-align:center}.chip .emo,.tog .emo{font-size:15px;width:auto}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--c,var(--mute));flex:none}
-.t-legume{--c:var(--legume)}.t-feculent{--c:var(--feculent)}.t-fruit{--c:var(--fruit)}.t-laitage{--c:var(--laitage)}.t-proteine{--c:var(--proteine)}.t-legumineuse{--c:var(--legumineuse)}.t-epice{--c:var(--epice)}.t-condiment{--c:var(--condiment)}
+.t-legume{--c:var(--legume)}.t-feculent{--c:var(--feculent)}.t-fruit{--c:var(--fruit)}.t-laitage{--c:var(--laitage)}.t-proteine{--c:var(--proteine)}.t-legumineuse{--c:var(--legumineuse)}.t-epice{--c:var(--epice)}.t-condiment{--c:var(--condiment)}.t-sucre{--c:var(--sucre)}
 .list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .row{width:100%;text-align:left;display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-height:56px}
 .row[aria-pressed=true]{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
@@ -149,12 +149,12 @@ nav svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;st
 <div id="toast" role="status" hidden></div>
 <script>
 {
-const TYPES=[['legume','Légume'],['feculent','Féculent'],['fruit','Fruit'],['laitage','Laitage'],['proteine','Protéine'],['legumineuse','Légumineuse'],['epice','Épices'],['condiment','Condiments']];
+const TYPES=[['legume','Légume'],['feculent','Féculent'],['fruit','Fruit'],['laitage','Laitage'],['proteine','Protéine'],['legumineuse','Légumineuse'],['epice','Épices'],['condiment','Condiments'],['sucre','Sucré']];
 const pl=l=>/s$/.test(l)?l:l+'s';
 const TL=Object.fromEntries(TYPES);
 const SLOTS=[['entree','Entrée'],['plat','Plat'],['proteine','Protéine'],['laitage','Laitage'],['dessert','Dessert']];
 const SL=Object.fromEntries(SLOTS);
-const HINT={entree:['legume','fruit'],plat:['feculent','legume','proteine','legumineuse'],proteine:['proteine','legumineuse'],laitage:['laitage'],dessert:['fruit','laitage']};
+const HINT={entree:['legume','fruit'],plat:['feculent','legume','proteine','legumineuse'],proteine:['proteine','legumineuse'],laitage:['laitage'],dessert:['fruit','laitage','sucre']};
 const MOM=[['matin','Matin'],['midi','Midi'],['soir','Soir'],['both','Midi et soir']];const ML=Object.fromEntries(MOM);
 const ORIG=[['maison','Maison'],['toutfait','Tout fait']];const OL=Object.fromEntries(ORIG);
 const WHO=[['commun','Commun'],['enfant','Enfant']];const WL=Object.fromEntries(WHO);
@@ -258,7 +258,7 @@ function loginSheet(msg){openSheet(`<h2>Connexion</h2><p class="muted" style="ma
 
 
 /* ---------- mise à jour des aliments (audit du 26/11) ---------- */
-const MIG_LAST=29;
+const MIG_LAST=30;
 function migrate(){if((S.mig||0)>=MIG_LAST||!S.aliments.length)return false;S.mig=S.mig||0;
   if(S.mig<2){
   const find=n=>S.aliments.find(a=>norm(a.name)===norm(n));
@@ -364,6 +364,16 @@ function migrate(){if((S.mig||0)>=MIG_LAST||!S.aliments.length)return false;S.mi
       if(!a){a={id:uid(),name,type:'proteine',shop:(ps[0]&&ps[0].shop)||shop,emoji:''};S.aliments.push(a)}
       for(const p of ps){a.shop=a.shop||p.shop||'';sw(p.id,a.id);S.plats=S.plats.filter(x=>x!==p)}}
     S.mig=29}
+  if(S.mig<30){// petit-déjeuner : aliments, plats et repas du matin
+    const BCB='Bio c’ Bon';if(!S.shops.includes('Biocoop'))S.shops.push('Biocoop');
+    const al=(name,type,shop,qty,re)=>{let a=S.aliments.find(x=>re.test(norm(x.name)));if(!a){a={id:uid(),name,type,shop,emoji:''};if(qty)a.qty=qty;S.aliments.push(a)}else if(!a.shop&&shop)a.shop=shop;return a};
+    const av=al('Flocons d’avoine','feculent',BCB,{n:30,u:'g'},/^(flocons? d.)?avoine$/),cf=al('Corn flakes','feculent',BCB,{n:20,u:'g'},/^corn ?flakes$/),rs=al('Raisins secs','fruit',BCB,{n:20,u:'g'},/^raisins? secs?$/),
+      ch=al('Chocolat sans lait','sucre','Biocoop',{n:20,u:'g'},/^chocolat( noir)? sans lait$/),su=al('Sucre','condiment','',null,/^sucre$/),
+      pain=al('Pain','feculent','',null,/^pain$/),ya=al('Yaourt','laitage','',null,/^yaourt$/);
+    for(const [name,ids,qty] of [['Tartine de chocolat',[pain,ch],{[pain.id]:{n:50,u:'g'},[ch.id]:{n:20,u:'g'}}],['Muesli raisins secs',[ya,av,cf,rs],{[ya.id]:{n:1,u:'pièce'},[av.id]:{n:30,u:'g'},[cf.id]:{n:20,u:'g'},[rs.id]:{n:15,u:'g'}}],['Muesli nature',[ya,av,cf,su],{[ya.id]:{n:1,u:'pièce'},[av.id]:{n:30,u:'g'},[cf.id]:{n:20,u:'g'}}]]){
+      let p=S.plats.find(x=>norm(x.name)===norm(name));if(!p){p={id:uid(),name,description:'',alimentIds:ids.map(a=>a.id),cat:'',origin:'maison',shop:'',moment:'matin',fav:false,members:[],qty};S.plats.push(p)}
+      if(!S.repas.some(r=>norm(r.name)===norm(name)))S.repas.push({id:uid(),name,moment:'matin',who:'commun',slots:{plat:{k:'p',id:p.id}},cond:[],members:[]})}
+    S.mig=30}
   return true}
 
 /* ---------- sheets & toast ---------- */
@@ -379,12 +389,12 @@ function withUndo(msg,fn){const before=JSON.stringify(S);fn();persist();render()
 /* ---------- emojis des aliments (devinés d'après le nom, modifiables) ---------- */
 const EMO=[[/pomme de terre|^patates?$|grenaille|frites/,'🥔'],[/patate douce/,'🍠'],[/compote/,'🍏'],[/fromage blanc|petits? suisses?|yaourt|brasse|skyr|faisselle|\blait\b|creme/,'🥛'],[/beurre/,'🧈'],[/sauce soja/,'🥢'],[/tofu/,'🫘'],[/vermicelle/,'🍝'],[/haricots? plats?/,'🫛'],[/brocoli/,'🥦'],[/courgette|concombre|cornichon/,'🥒'],[/carotte/,'🥕'],[/tomate/,'🍅'],[/poivron/,'🫑'],[/piment/,'🌶️'],[/aubergine/,'🍆'],[/^mais/,'🌽'],[/champignon/,'🍄'],[/avocat/,'🥑'],[/^ail$|^ail /,'🧄'],[/oignon|echalote/,'🧅'],[/courge|potiron|butternut|citrouille|potimarron/,'🎃'],[/petits? pois|haricots? verts?|feve|pois gourmand/,'🫛'],[/salade|laitue|mache|roquette|epinard|endive|chou|blette|fenouil|poireau|celeri|artichaut|asperge|navet|radis|betterave|panais/,'🥬'],[/gingembre/,'🫚'],[/olive/,'🫒'],
   [/pomme/,'🍎'],[/poire/,'🍐'],[/banane/,'🍌'],[/orange|clementine|mandarine/,'🍊'],[/citron/,'🍋'],[/fraise/,'🍓'],[/framboise|myrtille|mure|cassis|groseille/,'🫐'],[/raisin/,'🍇'],[/cerise/,'🍒'],[/peche|abricot|nectarine|prune|mirabelle/,'🍑'],[/ananas/,'🍍'],[/mangue/,'🥭'],[/kiwi/,'🥝'],[/melon/,'🍈'],[/pasteque/,'🍉'],[/coco/,'🥥'],
-  [/riz/,'🍚'],[/pates|coquillette|spaghetti|tagliatelle|penne|macaroni|lasagne|ravioli|nouille/,'🍝'],[/pain|baguette|brioche/,'🥖'],[/gnocchi/,'🥟'],[/cereale|flocon|avoine|muesli|porridge/,'🥣'],[/crepe|galette|pancake/,'🥞'],[/semoule|couscous|boulgour|quinoa|polenta|ble|epeautre/,'🌾'],
+  [/riz/,'🍚'],[/pates|coquillette|spaghetti|tagliatelle|penne|macaroni|lasagne|ravioli|nouille/,'🍝'],[/pain|baguette|brioche/,'🥖'],[/gnocchi/,'🥟'],[/cereale|flocon|avoine|muesli|porridge|corn ?flakes/,'🥣'],[/crepe|galette|pancake/,'🥞'],[/semoule|couscous|boulgour|quinoa|polenta|ble|epeautre/,'🌾'],
   [/fromage|comte|emmental|babybel|mozzarella|chevre|ricotta|parmesan|gruyere|camembert|brie|raclette|feta|tomme|roquefort|reblochon|mimolette|kiri|vache qui rit/,'🧀'],
   [/boeuf|steak|viande|veau|agneau|bœuf/,'🥩'],[/oeuf|œuf/,'🥚'],[/poisson|cabillaud|colin|saumon|thon|sardine|maquereau|truite|merlu|lieu|dorade|bar$|hareng|anchois/,'🐟'],[/crevette|gambas/,'🦐'],[/jambon/,'🍖'],[/poulet|dinde|dino|volaille|canard|nugget/,'🍗'],[/porc|saucisse|lardon|bacon|chorizo/,'🥓'],
   [/lentille|pois chiche|haricot|flageolet|feve|soja|edamame/,'🫘'],[/noix|amande|noisette|cacahuete|pistache|cajou/,'🥜'],
   [/huile/,'🫒'],[/miel/,'🍯'],[/chocolat|cacao/,'🍫'],[/sucre|confiture/,'🍯'],[/persil|basilic|thym|ciboulette|laurier|coriandre|menthe|herbes|romarin|aneth|estragon|origan/,'🌿'],[/sel|poivre|curry|cumin|paprika|curcuma|cannelle|muscade|epice|vinaigre|moutarde|ketchup|mayonnaise/,'🧂'],[/jus/,'🧃'],[/eau/,'💧']];
-const TEMO={legume:'🥬',feculent:'🌾',fruit:'🍎',laitage:'🥛',proteine:'🍗',legumineuse:'🫘',epice:'🧂',condiment:'🫙'};
+const TEMO={legume:'🥬',feculent:'🌾',fruit:'🍎',laitage:'🥛',proteine:'🍗',legumineuse:'🫘',epice:'🧂',condiment:'🫙',sucre:'🍫'};
 const guessEmo=a=>{const n=norm(a.name).replace(/œ/g,'oe');const h=EMO.find(([r])=>r.test(n));return h?h[1]:TEMO[a.type]||'🍽️'};
 const PINCH=a=>a&&(a.type==='condiment'||a.type==='epice');
 // En stock : 7 jours pour un aliment ou un plat ; épices et condiments toujours en stock sauf s'ils sont marqués épuisés
