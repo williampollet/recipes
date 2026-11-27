@@ -76,6 +76,8 @@ h2{font-size:24px;line-height:1.15;margin:0 0 4px}h3{font-size:17px;margin:20px 
 .qty{display:inline-flex;gap:6px}.qty input{width:90px}.qty select{width:auto}
 .qrow{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid var(--line)}
 .amt{font-weight:500;white-space:nowrap}
+.adj{display:flex;gap:4px;align-items:center}.pm{width:40px;min-height:48px;padding:0;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:20px;line-height:1}
+.theo{color:var(--mute);font-size:13px}.theo .link{font-size:13px;padding:0;min-height:0}.ck.zero span:first-of-type{color:var(--mute)}
 .resterow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}.chipx{border:0;background:transparent;font-size:18px;line-height:1;padding:0 2px;min-height:28px}
 .reste{font-size:12px;font-weight:500;color:#fff;background:#c08a1c;border-radius:6px;padding:1px 7px;vertical-align:2px;margin-right:4px}
 .entry{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px}
@@ -193,7 +195,7 @@ function clean(d){const s=empty();if(d&&typeof d==='object'){for(const k of['ali
   const ids=v=>Array.isArray(v)?v.filter(x=>typeof x==='string'):[];
   s.members=s.members.map(m=>({id:m.id,name:String(m.name||''),kind:m.kind==='enfant'?'enfant':'adulte'}));
   const mm=k=>new Map(((d&&Array.isArray(d[k]))?d[k]:[]).filter(x=>x&&typeof x==='object').map(x=>[x.id,x.members]));const pm=mm('plats'),rm=mm('repas');s.plats.forEach(x=>x.members=ids(pm.get(x.id)));s.repas.forEach(x=>x.members=ids(rm.get(x.id)));
-  s.courses={};if(d&&d.courses&&typeof d.courses==='object')for(const k in d.courses){const c=d.courses[k]||{};s.courses[k]={checked:ids(c.checked),extra:ids(c.extra)}}
+  s.courses={};if(d&&d.courses&&typeof d.courses==='object')for(const k in d.courses){const c=d.courses[k]||{};s.courses[k]={checked:ids(c.checked),extra:ids(c.extra),adj:Object.fromEntries(Object.entries(c.adj&&typeof c.adj==='object'?c.adj:{}).filter(([a,v])=>typeof v==='number'&&isFinite(v)&&v))}}
   s.cats=s.cats.map(c=>({id:c.id,label:String(c.label||'')}));
   return s}
 let S=empty();
@@ -626,7 +628,7 @@ function weekSheet(){const cur=readWeek(ui.week),n=tplCount(cur);
 
 
 /* ---------- liste de courses ---------- */
-function coursesSheet(){const days=weekDays(ui.week),wk=keyOf(days[0]);const cs=S.courses[wk]||{checked:[],extra:[]};
+function coursesSheet(){const days=weekDays(ui.week),wk=keyOf(days[0]);const cs=S.courses[wk]||{checked:[],extra:[],adj:{}};cs.adj=cs.adj||{};
   const save=()=>{S.courses[wk]=cs;const old=keyOf(weekDays(ui.week-8)[0]);for(const k of Object.keys(S.courses))if(k<old)delete S.courses[k];persist()};
   const f=d=>d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
   openSheet(`<h2>Liste de courses</h2><p class="muted" style="margin:0">Semaine du ${f(days[0])} au ${f(days[6])}, d’après les repas prévus. Quantités = quantité par adulte × portions (enfant = ½), restes compris.</p><div id="cl"></div>
@@ -639,18 +641,24 @@ function coursesSheet(){const days=weekDays(ui.week),wk=keyOf(days[0]);const cs=
           if(ref.k==='a')add(al,o.id,o.qty,por);else if(o.origin==='toutfait')add(ready,o.id,null,por);else o.alimentIds.filter(A).forEach(i=>add(al,i,o.qty&&o.qty[i],por))}}}
       return {al,ready}};
     const amount=(e,ready)=>ready?(e.p===1?'1 portion':e.p.toLocaleString('fr-FR')+' portions'):e.u.size?[...e.u].map(([u,n])=>fmtQ(n,u)).join(' + '):(e.c>1?'×'+e.c:'');
+    // quantité ajustable : base théorique + pas du bouton + affichage
+    const meas=(e,ready)=>{const def=amount(e,ready);if(ready)return {def,base:e.p,step:1,fmt:v=>v===1?'1 portion':v.toLocaleString('fr-FR')+' portions'};
+      if(e.u.size){const [[u,n],...o]=[...e.u];const step=u==='g'?50:u==='ml'?100:1,base=step===1?Math.ceil(n-1e-9):n;return {def,base,step,fmt:v=>[fmtQ(v,u),...o.map(([u2,n2])=>fmtQ(n2,u2))].join(' + ')}}
+      return {def,base:e.c,step:1,fmt:v=>'×'+v}};
     let lines=[];
     const draw=()=>{const {al,ready}=build();lines=[];const ck=new Set(cs.checked);
-      const item=(key,name,txt)=>{const on=ck.has(key);if(!on)lines.push(name+(txt?` : ${txt}`:''));return `<li><label class="ck${on?' done':''}"><input type="checkbox" data-ck="${esc(key)}" ${on?'checked':''}><span>${key.startsWith('a:')&&A(key.slice(2))?emo(A(key.slice(2)))+' ':''}${esc(name)}</span>${txt?`<span class="amt">${esc(txt)}</span>`:''}</label></li>`};
+      const item=(key,name,ms)=>{const on=ck.has(key),dl=ms?(cs.adj[key]||0):0,v=ms?Math.max(0,ms.base+dl):0,txt=!ms?'':dl?ms.fmt(v):ms.def,zero=ms&&dl&&v<=0;
+        if(!on&&!zero)lines.push(name+(txt?` : ${txt}`:''));
+        return `<li><label class="ck${on?' done':''}${zero?' zero':''}"><input type="checkbox" data-ck="${esc(key)}" ${on?'checked':''}><span>${key.startsWith('a:')&&A(key.slice(2))?emo(A(key.slice(2)))+' ':''}${esc(name)}${dl?`<br><small class="theo">prévu : ${esc(ms.def||ms.fmt(ms.base))} · <button type="button" class="link" data-adjr="${esc(key)}">annuler l’ajustement</button></small>`:''}</span>${zero?'<span class="amt muted">déjà là</span>':txt?`<span class="amt">${esc(txt)}</span>`:''}</label>${ms?`<span class="adj"><button type="button" class="pm" data-adj="${esc(key)}" data-d="${-ms.step}" aria-label="Moins de ${esc(name)}">−</button><button type="button" class="pm" data-adj="${esc(key)}" data-d="${ms.step}" aria-label="Plus de ${esc(name)}">+</button></span>`:''}</li>`};
       let h=`<div class="seg" style="margin:12px 0 0"><button type="button" class="tog" data-cg="shop" aria-pressed="${ui.cg!=='type'}">Par magasin</button><button type="button" class="tog" data-cg="type" aria-pressed="${ui.cg==='type'}">Par type</button></div>`;const h0=h;
       if(ui.cg!=='type'){const groups=new Map();const put=(shop,key,name,txt,t)=>{const g=shop||'';if(!groups.has(g))groups.set(g,[]);groups.get(g).push({key,name,txt,t})};
-        for(const id of al.keys()){const a=A(id);if(a)put(a.shop,'a:'+a.id,a.name,amount(al.get(id)),TYPES.findIndex(x=>x[0]===a.type))}
-        for(const id of ready.keys()){const p=P(id);if(p)put(p.shop,'p:'+p.id,p.name,amount(ready.get(id),1),98)}
+        for(const id of al.keys()){const a=A(id);if(a)put(a.shop,'a:'+a.id,a.name,meas(al.get(id)),TYPES.findIndex(x=>x[0]===a.type))}
+        for(const id of ready.keys()){const p=P(id);if(p)put(p.shop,'p:'+p.id,p.name,meas(ready.get(id),1),98)}
         const order=[...groups.keys()].sort((a,b)=>(a===''?1:0)-(b===''?1:0)||a.localeCompare(b,'fr'));
         for(const g of order){const arr=groups.get(g).sort((x,y)=>x.t-y.t||x.name.localeCompare(y.name,'fr'));lines.push('','#'+(g||'Sans magasin'));h+=`<h3>${esc(g||'Sans magasin')}</h3><ul class="cklist">${arr.map(x=>item(x.key,x.name,x.txt)).join('')}</ul>`}
       }else{
-      for(const [t,l] of TYPES){const arr=byName([...al.keys()].map(A).filter(a=>a&&a.type===t));if(!arr.length)continue;lines.push('','#'+pl(l));h+=`<h3 class="t-${t}" style="display:flex;gap:8px;align-items:center"><span class="dot"></span>${pl(l)}</h3><ul class="cklist">${arr.map(a=>item('a:'+a.id,a.name,amount(al.get(a.id)))).join('')}</ul>`}
-      const rp=byName([...ready.keys()].map(P).filter(Boolean));if(rp.length){lines.push('','#Plats tout faits');h+=`<h3>Plats tout faits</h3><ul class="cklist">${rp.map(p=>item('p:'+p.id,p.name,amount(ready.get(p.id),1))).join('')}</ul>`}}
+      for(const [t,l] of TYPES){const arr=byName([...al.keys()].map(A).filter(a=>a&&a.type===t));if(!arr.length)continue;lines.push('','#'+pl(l));h+=`<h3 class="t-${t}" style="display:flex;gap:8px;align-items:center"><span class="dot"></span>${pl(l)}</h3><ul class="cklist">${arr.map(a=>item('a:'+a.id,a.name,meas(al.get(a.id)))).join('')}</ul>`}
+      const rp=byName([...ready.keys()].map(P).filter(Boolean));if(rp.length){lines.push('','#Plats tout faits');h+=`<h3>Plats tout faits</h3><ul class="cklist">${rp.map(p=>item('p:'+p.id,p.name,meas(ready.get(p.id),1))).join('')}</ul>`}}
       if(cs.extra.length){lines.push('','#En plus');h+=`<h3>En plus</h3><ul class="cklist">${cs.extra.map((x,i)=>item('x:'+x,x,'').replace('</label></li>',`</label><button type="button" class="x" data-xdel="${i}" aria-label="Retirer ${esc(x)}">×</button></li>`)).join('')}</ul>`}
       if(h===h0&&!cs.extra.length)h='';
       root.querySelector('#cl').innerHTML=h||'<p class="empty" style="margin-top:14px">Aucun repas prévu cette semaine. Remplis le planning, la liste se fera toute seule.</p>'};
@@ -659,6 +667,8 @@ function coursesSheet(){const days=weekDays(ui.week),wk=keyOf(days[0]);const cs=
     const addX=()=>{const i=root.querySelector('#cx'),v=i.value.trim();if(!v)return;if(!cs.extra.includes(v))cs.extra.push(v);i.value='';save();draw()};
     root.querySelector('#cxb').onclick=addX;root.querySelector('#cx').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();addX()}};
     root.onclick=e=>{const x=e.target.closest('[data-xdel]');if(x){const v=cs.extra[+x.dataset.xdel];cs.extra.splice(+x.dataset.xdel,1);cs.checked=cs.checked.filter(k=>k!=='x:'+v);save();draw();return}
+      const aj=e.target.closest('[data-adj]');if(aj){e.preventDefault();const k2=aj.dataset.adj,nv=Math.round(((cs.adj[k2]||0)+Number(aj.dataset.d))*100)/100;if(nv)cs.adj[k2]=nv;else delete cs.adj[k2];save();draw();return}
+      const ar=e.target.closest('[data-adjr]');if(ar){e.preventDefault();delete cs.adj[ar.dataset.adjr];save();draw();return}
       const cg=e.target.closest('[data-cg]');if(cg){ui.cg=cg.dataset.cg;draw();return}
       if(e.target.id==='cr'){cs.checked=[];save();draw();return}
       if(e.target.id==='cc'){const txt=('Courses du '+f(days[0])+' au '+f(days[6])+'\n'+lines.map(l=>!l?'':l[0]==='#'?l.slice(1):'- '+l).join('\n')).trim();
