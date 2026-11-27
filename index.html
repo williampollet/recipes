@@ -254,7 +254,7 @@ function loginSheet(msg){openSheet(`<h2>Connexion</h2><p class="muted" style="ma
 
 
 /* ---------- mise à jour des aliments (audit du 26/11) ---------- */
-const MIG_LAST=26;
+const MIG_LAST=27;
 function migrate(){if((S.mig||0)>=MIG_LAST||!S.aliments.length)return false;S.mig=S.mig||0;
   if(S.mig<2){
   const find=n=>S.aliments.find(a=>norm(a.name)===norm(n));
@@ -341,6 +341,15 @@ function migrate(){if((S.mig||0)>=MIG_LAST||!S.aliments.length)return false;S.mi
   if(S.mig<25){for(const r of S.repas){if(r.moment)continue;const p=r.slots?.plat?.k==='p'&&P(r.slots.plat.id);if(p&&ML[p.moment])r.moment=p.moment}S.mig=25}
   if(S.mig<26){for(const a of S.aliments)if(/^(sel|poivre|huile|vinaigre|moutarde|sauce soja|ketchup|mayonnaise)\b/.test(norm(a.name)))a.type='condiment';
     for(const n of ['Sel','Poivre','Huile d’olive','Huile de colza'])if(!S.aliments.some(x=>norm(x.name).replace(/[’']/g,"'")===norm(n).replace(/[’']/g,"'")))S.aliments.push({id:uid(),name:n,type:'condiment',shop:'Bio c’ Bon'});S.mig=26}
+  if(S.mig<27){// plats qui sont en fait des aliments (conserves, boîtes) -> aliments
+    const sw=(pid,aid)=>{const fx=sl=>{for(const k in sl||{})if(sl[k]?.k==='p'&&sl[k].id===pid)sl[k]={k:'a',id:aid}};S.repas.forEach(r=>fx(r.slots));for(const k in S.planning)for(const m in S.planning[k])(Array.isArray(S.planning[k][m])?S.planning[k][m]:[]).forEach(e=>e&&typeof e==='object'&&fx(e.slots));S.weeks.forEach(w=>w.days.forEach(d=>{for(const m in d||{})(Array.isArray(d[m])?d[m]:[]).forEach(e=>e&&typeof e==='object'&&fx(e.slots))}));if(S.stock&&S.stock['p:'+pid]){S.stock['a:'+aid]=S.stock['p:'+pid];delete S.stock['p:'+pid]}};
+    for(const p of [...S.plats]){const n=norm(p.name);if(!/conserve|boite|bocal|sardine/.test(n))continue;
+      let a=null,base=p.alimentIds.map(A).filter(Boolean)[0];
+      if(/sardine/.test(n))a=S.aliments.find(x=>/^sardines?$/.test(norm(x.name)));
+      if(/petits? pois/.test(n))a=S.aliments.find(x=>norm(x.name)==='petits pois en conserve');
+      if(!a){a={id:uid(),name:/petits? pois/.test(n)?'Petits pois en conserve':/sardine/.test(n)?'Sardines':p.name,type:base?.type==='legume'?'legume':base?.type||'proteine',shop:p.shop||'',emoji:''};S.aliments.push(a)}
+      a.shop=a.shop||p.shop||'';sw(p.id,a.id);S.plats=S.plats.filter(x=>x!==p)}
+    S.mig=27}
   return true}
 
 /* ---------- sheets & toast ---------- */
