@@ -44,7 +44,7 @@ h2{font-size:24px;line-height:1.15;margin:0 0 4px}h3{font-size:17px;margin:20px 
 .filters,.togs,.seg{display:flex;flex-wrap:wrap;gap:8px}
 .fchip,.tog{display:inline-flex;align-items:center;gap:7px;min-height:44px;padding:0 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);font-size:15px}
 .fchip[aria-pressed=true],.tog[aria-pressed=true]{border-color:var(--c,var(--ink));background:color-mix(in srgb,var(--c,var(--ink)) 18%,var(--card));font-weight:500}
-.emo{font-size:20px;line-height:1;flex:none;width:26px;text-align:center}.chip .emo{font-size:15px;width:auto}
+.emo{font-size:20px;line-height:1;flex:none;width:26px;text-align:center}.chip .emo,.tog .emo{font-size:15px;width:auto}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--c,var(--mute));flex:none}
 .t-legume{--c:var(--legume)}.t-feculent{--c:var(--feculent)}.t-fruit{--c:var(--fruit)}.t-laitage{--c:var(--laitage)}.t-proteine{--c:var(--proteine)}.t-legumineuse{--c:var(--legumineuse)}.t-epice{--c:var(--epice)}
 .list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
@@ -402,12 +402,12 @@ function platForm(id,preset){const p=id?P(id):null;const d={al:new Set(p?p.alime
     const drawCats=()=>{root.querySelector('#cats').innerHTML=[{id:'',label:'Aucun'},...allCats()].map(c=>`<button type="button" class="tog" data-cat="${esc(c.id)}" aria-pressed="${d.cat===c.id}">${esc(c.label)}</button>`).join('')};
     const draw=()=>{const raw=q.value.trim(),k=norm(raw);
       const list=byName(S.aliments).filter(a=>!k||norm(a.name).includes(k)).sort((a,b)=>d.al.has(b.id)-d.al.has(a.id));
-      let h=list.map(a=>`<button type="button" class="tog t-${a.type}" data-al="${esc(a.id)}" aria-pressed="${d.al.has(a.id)}"><span class="dot"></span>${esc(a.name)}</button>`).join('');
+      let h=list.map(a=>`<button type="button" class="tog t-${a.type}" data-al="${esc(a.id)}" aria-pressed="${d.al.has(a.id)}">${emoHtml(a)}${esc(a.name)}</button>`).join('');
       if(raw&&!S.aliments.some(a=>norm(a.name)===k))h+=`<div class="create" style="width:100%"><p>Créer « ${esc(raw)} » comme :</p><div class="seg">${TYPES.map(([t,l])=>`<button type="button" class="tog t-${t}" data-mk="${t}"><span class="dot"></span>${l}</button>`).join('')}</div></div>`;
       root.querySelector('#alc').innerHTML=h||'<p class="muted" style="margin:0">Tape un nom pour créer ton premier aliment.</p>';
       root.querySelector('#fcount').textContent=d.al.size?`· ${d.al.size} choisi${d.al.size>1?'s':''}`:'';
       const qb=root.querySelector('#qtys');qb.querySelectorAll('[data-qn]').forEach(i=>{const q=readQty(qb,i.dataset.qn);if(q)d.qty[i.dataset.qn]=q;else delete d.qty[i.dataset.qn]});
-      const sel=byName([...d.al].map(A).filter(Boolean));qb.innerHTML=sel.length?sel.map(a=>`<div class="qrow"><span class="chip t-${a.type}"><span class="dot"></span>${esc(a.name)}</span>${qtyInput(a.id,d.qty[a.id])}</div>`).join(''):'<p class="muted" style="margin:0">Choisis les aliments en bas de la fiche.</p>'};
+      const sel=byName([...d.al].map(A).filter(Boolean));qb.innerHTML=sel.length?sel.map(a=>`<div class="qrow"><span class="chip t-${a.type}">${emoHtml(a)}${esc(a.name)}</span>${qtyInput(a.id,d.qty[a.id])}</div>`).join(''):'<p class="muted" style="margin:0">Choisis les aliments en bas de la fiche.</p>'};
     const drawOri=()=>{root.querySelector('#ori').innerHTML=ORIG.map(([k,l])=>`<button type="button" class="tog" data-ori="${k}" aria-pressed="${d.origin===k}">${l}</button>`).join('')};
     const drawMom=()=>{root.querySelector('#mom').innerHTML=MOM.map(([k,l])=>`<button type="button" class="tog" data-mom="${k}" aria-pressed="${d.moment===k}">${l}</button>`).join('')};
     const drawMem=()=>{root.querySelector('#pmem').innerHTML=memToggles(d.mem)};
