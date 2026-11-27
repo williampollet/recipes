@@ -76,6 +76,8 @@ h2{font-size:24px;line-height:1.15;margin:0 0 4px}h3{font-size:17px;margin:20px 
 .qty{display:inline-flex;gap:6px}.qty input{width:90px}.qty select{width:auto}
 .qrow{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid var(--line)}
 .amt{font-weight:500;white-space:nowrap}
+.condrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 8px}.condrow .sl{color:var(--mute);font-weight:500;margin-right:6px}.condrow .ghost{min-height:36px;padding:0 12px}
+.ck.instock{cursor:default}
 .adj{display:flex;gap:4px;align-items:center}.pm{width:40px;min-height:48px;padding:0;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:20px;line-height:1}
 .theo{color:var(--mute);font-size:13px}.theo .link{font-size:13px;padding:0;min-height:0}.ck.zero span:first-of-type{color:var(--mute)}
 .resterow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}.chipx{border:0;background:transparent;font-size:18px;line-height:1;padding:0 2px;min-height:28px}
@@ -181,11 +183,11 @@ const byName=arr=>[...arr].sort((a,b)=>String(a.name).localeCompare(String(b.nam
 const UNITS=['g','ml','pièce','tranche','c. à s.'];
 const qOk=q=>q&&typeof q==='object'&&Number(q.n)>0&&UNITS.includes(q.u)?{n:Number(q.n),u:q.u}:undefined;
 const SHOPS=['Supermarché','Picard','Bio c’ Bon','Marché','Fromagerie','Boulangerie','Boucherie'];
-const empty=()=>({shops:[],v:1,aliments:[],plats:[],repas:[],planning:{},cats:[],weeks:[],members:[],courses:{},restes:[]});
+const empty=()=>({shops:[],v:1,aliments:[],plats:[],repas:[],planning:{},cats:[],weeks:[],members:[],courses:{},restes:[],stock:{}});
 function clean(d){const s=empty();if(d&&typeof d==='object'){for(const k of['aliments','plats','repas','cats','weeks','members','restes'])if(Array.isArray(d[k]))s[k]=d[k].filter(x=>x&&typeof x.id==='string');if(d.planning&&typeof d.planning==='object'&&!Array.isArray(d.planning))s.planning=d.planning}
   s.aliments=s.aliments.map(a=>({id:a.id,name:String(a.name||''),type:TL[a.type]?a.type:'legume',qty:qOk(a.qty),shop:typeof a.shop==='string'?a.shop.slice(0,60):'',emoji:typeof a.emoji==='string'?a.emoji.trim().slice(0,12):''}));
   s.plats=s.plats.map(p=>({id:p.id,name:String(p.name||''),description:String(p.description||''),alimentIds:Array.isArray(p.alimentIds)?p.alimentIds.filter(x=>typeof x==='string'):[],cat:typeof p.cat==='string'?p.cat:'',origin:['maison','toutfait'].includes(p.origin)?p.origin:'',moment:ML[p.moment]?p.moment:'',shop:typeof p.shop==='string'?p.shop.slice(0,60):'',fav:!!p.fav,qty:Object.fromEntries(Object.entries(p.qty&&typeof p.qty==='object'?p.qty:{}).map(([k,v])=>[k,qOk(v)]).filter(([k,v])=>v))}));
-  s.repas=s.repas.map(r=>({id:r.id,name:String(r.name||''),moment:ML[r.moment]?r.moment:'',who:r.who==='enfant'?'enfant':'commun',slots:r.slots&&typeof r.slots==='object'?r.slots:{}}));
+  s.repas=s.repas.map(r=>({id:r.id,name:String(r.name||''),moment:ML[r.moment]?r.moment:'',who:r.who==='enfant'?'enfant':'commun',slots:r.slots&&typeof r.slots==='object'?r.slots:{},cond:Array.isArray(r.cond)?r.cond.filter(i=>typeof i==='string'):[]}));
   const dOk=x=>x&&Number.isInteger(x.d)&&x.d>=0&&x.d<7&&(x.m==='midi'||x.m==='soir');
   s.weeks=s.weeks.map(w=>({id:w.id,name:String(w.name||'Semaine'),days:Array.isArray(w.days)?w.days.slice(0,7).map(d=>d&&typeof d==='object'?{midi:d.midi,soir:d.soir}:{}):[],restes:Array.isArray(w.restes)?w.restes.filter(x=>x&&typeof x.rid==='string'&&dOk(x.from)&&dOk(x.to)).map(x=>({rid:x.rid,from:{d:x.from.d,m:x.from.m},to:{d:x.to.d,m:x.to.m},members:Array.isArray(x.members)?x.members.filter(i=>typeof i==='string'):[]})):[],...(Array.isArray(w.slots)?{slots:w.slots.filter(x=>typeof x==='string'&&/^\d\|(midi|soir)$/.test(x))}:{})})).filter(w=>w.days.length);
   s.mig=Number(d&&d.mig)||0;
@@ -197,6 +199,7 @@ function clean(d){const s=empty();if(d&&typeof d==='object'){for(const k of['ali
   const mm=k=>new Map(((d&&Array.isArray(d[k]))?d[k]:[]).filter(x=>x&&typeof x==='object').map(x=>[x.id,x.members]));const pm=mm('plats'),rm=mm('repas');s.plats.forEach(x=>x.members=ids(pm.get(x.id)));s.repas.forEach(x=>x.members=ids(rm.get(x.id)));
   s.courses={};if(d&&d.courses&&typeof d.courses==='object')for(const k in d.courses){const c=d.courses[k]||{};s.courses[k]={checked:ids(c.checked),extra:ids(c.extra),adj:Object.fromEntries(Object.entries(c.adj&&typeof c.adj==='object'?c.adj:{}).filter(([a,v])=>typeof v==='number'&&isFinite(v)&&v))}}
   s.cats=s.cats.map(c=>({id:c.id,label:String(c.label||'')}));
+  const nd=new Date(),td=`${nd.getFullYear()}-${String(nd.getMonth()+1).padStart(2,'0')}-${String(nd.getDate()).padStart(2,'0')}`;s.stock={};if(d&&d.stock&&typeof d.stock==='object')for(const k in d.stock){const v=d.stock[k];if(!/^[ap]:/.test(k)||!v)continue;if(v.out===true)s.stock[k]={out:true};else if(typeof v.until==='string'&&v.until>=td)s.stock[k]={until:v.until}}
   return s}
 let S=empty();
 try{const raw=localStorage.getItem(LS);if(raw)S=clean(JSON.parse(raw))}catch(e){}
@@ -322,7 +325,7 @@ function migrate(){if((S.mig||0)>=MIG_LAST||!S.aliments.length)return false;S.mi
     S.aliments=S.aliments.filter(a=>!drop.has(a));
     for(const a of S.aliments){const k=key(a.name);if(/^(concasse de tomates|coquillettes|beurre|oeufs?|sardines?)$/.test(k)){a.shop='Bio c’ Bon';a.name=a.name.charAt(0).toUpperCase()+a.name.slice(1);if(k==='coquillettes'&&!/\(pâtes\)$/.test(a.name))a.name='Coquillettes (pâtes)'}}
     S.mig=20}
-  if(S.mig<21){const fr=v=>entriesAt(v).map(e=>({id:e.id,r:e.r,slots:e.slots,members:entryMembers(e)}));
+  if(S.mig<21){const fr=v=>entriesAt(v).map(e=>({id:e.id,r:e.r,slots:e.slots,cond:e.cond,members:entryMembers(e)}));
     for(const k of Object.keys(S.planning)){const day=S.planning[k];if(!day||typeof day!=='object'){delete S.planning[k];continue}for(const m of ['midi','soir']){const l=fr(day[m]);if(l.length)day[m]=l;else delete day[m]}if(!Object.keys(day).length)delete S.planning[k]}
     for(const w of S.weeks)w.days=w.days.map(d=>{const o={};for(const m of ['midi','soir']){const l=fr(d&&d[m]);if(l.length)o[m]=l}return o});
     S.mig=21}
@@ -358,6 +361,16 @@ const EMO=[[/pomme de terre|^patates?$|grenaille|frites/,'🥔'],[/patate douce/
   [/huile/,'🫒'],[/miel/,'🍯'],[/chocolat|cacao/,'🍫'],[/sucre|confiture/,'🍯'],[/persil|basilic|thym|ciboulette|laurier|coriandre|menthe|herbes|romarin|aneth|estragon|origan/,'🌿'],[/sel|poivre|curry|cumin|paprika|curcuma|cannelle|muscade|epice|vinaigre|moutarde|ketchup|mayonnaise/,'🧂'],[/jus/,'🧃'],[/eau/,'💧']];
 const TEMO={legume:'🥬',feculent:'🌾',fruit:'🍎',laitage:'🥛',proteine:'🍗',legumineuse:'🫘',epice:'🧂',condiment:'🫙'};
 const guessEmo=a=>{const n=norm(a.name).replace(/œ/g,'oe');const h=EMO.find(([r])=>r.test(n));return h?h[1]:TEMO[a.type]||'🍽️'};
+const PINCH=a=>a&&(a.type==='condiment'||a.type==='epice');
+// En stock : 7 jours pour un aliment ou un plat ; épices et condiments toujours en stock sauf s'ils sont marqués épuisés
+const keyA=k=>k.startsWith('a:')?A(k.slice(2)):null;
+const inStock=k=>{const v=S.stock[k],a=keyA(k);if(a&&PINCH(a))return !(v&&v.out);return !!(v&&v.until&&v.until>=keyOf(new Date()))};
+function setStock(k,on){const a=keyA(k);if(a&&PINCH(a)){if(on)delete S.stock[k];else S.stock[k]={out:true}}else if(on){const d=new Date();d.setDate(d.getDate()+6);S.stock[k]={until:keyOf(d)}}else delete S.stock[k]}
+const stockTxt=k=>{const v=S.stock[k];return v&&v.until?'jusqu’au '+fromKey(v.until).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric'}):'toujours'};
+const condChips=ids=>(ids||[]).map(A).filter(Boolean).map(a=>`<span class="chip t-${a.type}">${emoHtml(a)}${esc(a.name)}</span>`).join('');
+function condPicker(set,onChange){openSheet(`<h2>Condiments et épices</h2><p class="muted" style="margin:0">Sans quantité, autant que tu veux. Ils ne s’additionnent pas dans les courses.</p><div class="seg" id="cpl" style="margin-top:12px"></div><div class="actions"><button type="button" class="primary" data-close>Terminé</button></div>`,root=>{
+  const draw=()=>{const arr=TYPES.filter(([t])=>t==='condiment'||t==='epice').flatMap(([t])=>byName(S.aliments.filter(a=>a.type===t)));root.querySelector('#cpl').innerHTML=arr.map(a=>`<button type="button" class="tog" data-cp="${esc(a.id)}" aria-pressed="${set.has(a.id)}">${emoHtml(a)}${esc(a.name)}</button>`).join('')||'<p class="muted">Aucun condiment. Ajoute-en dans Aliments.</p>'};draw();
+  root.onclick=e=>{const b=e.target.closest('[data-cp]');if(!b)return;const i=b.dataset.cp;set.has(i)?set.delete(i):set.add(i);draw();onChange()}},2)}
 const emo=a=>a&&(a.emoji||guessEmo(a))||'';
 const emoHtml=a=>`<span class="emo" aria-hidden="true">${emo(a)}</span>`;
 const alChip=a=>`<span class="chip t-${a.type}">${emoHtml(a)}${esc(a.name)}</span>`;
@@ -369,12 +382,15 @@ function alimentForm(id,preset){const a=id?A(id):null;let type=a?.type||preset?.
   <div style="display:flex;gap:10px;align-items:flex-end"><label style="flex:1">Nom<input id="fn" value="${esc(a?.name||preset?.name||'')}" autocomplete="off" placeholder="ex. Courgette"></label><label style="width:84px">Emoji<input id="fem" value="${esc(a?.emoji||'')}" placeholder="${esc(guessEmo({name:a?.name||preset?.name||'',type:a?.type||preset?.type||'legume'}))}" autocomplete="off" style="text-align:center;font-size:22px" aria-label="Emoji (laisser vide pour le choix automatique)"></label></div>
   <fieldset><legend>Type</legend><div class="seg" id="seg">${TYPES.map(([k,l])=>`<button type="button" class="tog t-${k}" data-type="${k}" aria-pressed="${k===type}"><span class="dot"></span>${l}</button>`).join('')}</div></fieldset>
   <fieldset><legend>Magasin</legend><div id="ashop"></div></fieldset>
+  ${a?`<fieldset><legend>Stock</legend><div class="seg" id="astk"></div></fieldset>`:''}
   <fieldset><legend>Portion par adulte <span class="muted">(quand il est servi seul dans un repas)</span></legend>${qtyInput('self',a?.qty)}</fieldset>
   ${a?`<h3>Plats avec ${esc(a.name)} <span class="muted">${used.length}</span></h3>${used.length?`<ul class="list">${used.map(p=>`<li><button type="button" class="row" data-open-plat="${esc(p.id)}"><span class="rmain"><strong>${p.fav?'★ ':''}${esc(p.name)}</strong></span>${C(p.cat)?`<span class="cat">${esc(C(p.cat).label)}</span>`:''}</button></li>`).join('')}</ul>`:'<p class="muted">Aucun plat pour l’instant.</p>'}
   <div class="ideabox"><h3>Idées de plats</h3><p class="muted" style="margin:0">${esc(a.name)} croisé avec chaque type de plat. Touche une idée pour la créer.</p><div class="ideas">${ideasFor(a)}</div></div>`:''}
   <p class="err" id="fe" role="alert"></p>
   <div class="actions">${a?'<button type="button" class="danger" id="fd">Supprimer</button>':''}<button type="button" class="ghost" data-close>Annuler</button><button class="primary">Enregistrer</button></div></form>`,root=>{
     shopPicker(root,root.querySelector('#ashop'),()=>shop,v=>{shop=v});
+    const drawStk=()=>{const b=root.querySelector('#astk');if(!b)return;const k='a:'+a.id,on=inStock(k),pin=PINCH(a);b.innerHTML=`<button type="button" class="tog" data-stk="1" aria-pressed="${on}">${pin?'En stock':on?'En stock, '+stockTxt(k):'En stock 7 jours'}</button><button type="button" class="tog" data-stk="0" aria-pressed="${!on}">${pin?'Épuisé':'Pas en stock'}</button>`};drawStk();
+    root.querySelector('#astk')?.addEventListener('click',e=>{const b=e.target.closest('[data-stk]');if(!b)return;e.stopPropagation();setStock('a:'+a.id,b.dataset.stk==='1');persist();drawStk();render()});
     if(!a)root.querySelector('#fn').focus();
     const ph=()=>{root.querySelector('#fem').placeholder=guessEmo({name:root.querySelector('#fn').value,type})};root.querySelector('#fn').addEventListener('input',ph);
     root.onclick=e=>{const b=e.target.closest('[data-type]');if(b){type=b.dataset.type;root.querySelectorAll('#seg [data-type]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.type===type));ph();return}
@@ -418,7 +434,7 @@ function platForm(id,preset){const p=id?P(id):null;const d={al:new Set(p?p.alime
       root.querySelector('#alc').innerHTML=h||'<p class="muted" style="margin:0">Tape un nom pour créer ton premier aliment.</p>';
       root.querySelector('#fcount').textContent=d.al.size?`· ${d.al.size} choisi${d.al.size>1?'s':''}`:'';
       const qb=root.querySelector('#qtys');qb.querySelectorAll('[data-qn]').forEach(i=>{const q=readQty(qb,i.dataset.qn);if(q)d.qty[i.dataset.qn]=q;else delete d.qty[i.dataset.qn]});
-      const sel=byName([...d.al].map(A).filter(Boolean));qb.innerHTML=sel.length?sel.map(a=>`<div class="qrow"><span class="chip t-${a.type}">${emoHtml(a)}${esc(a.name)}</span>${qtyInput(a.id,d.qty[a.id])}</div>`).join(''):'<p class="muted" style="margin:0">Choisis les aliments en bas de la fiche.</p>'};
+      const sel=byName([...d.al].map(A).filter(Boolean));qb.innerHTML=sel.length?sel.map(a=>`<div class="qrow"><span class="chip t-${a.type}">${emoHtml(a)}${esc(a.name)}</span>${PINCH(a)?'<span class="muted" style="font-size:14px">sans quantité</span>':qtyInput(a.id,d.qty[a.id])}</div>`).join(''):'<p class="muted" style="margin:0">Choisis les aliments en bas de la fiche.</p>'};
     const drawOri=()=>{root.querySelector('#ori').innerHTML=ORIG.map(([k,l])=>`<button type="button" class="tog" data-ori="${k}" aria-pressed="${d.origin===k}">${l}</button>`).join('')};
     const drawMom=()=>{root.querySelector('#mom').innerHTML=MOM.map(([k,l])=>`<button type="button" class="tog" data-mom="${k}" aria-pressed="${d.moment===k}">${l}</button>`).join('')};
     const drawMem=()=>{root.querySelector('#pmem').innerHTML=memToggles(d.mem)};
@@ -443,11 +459,12 @@ function platForm(id,preset){const p=id?P(id):null;const d={al:new Set(p?p.alime
       persist();closeSheet(1);render();toast(cur?'Plat modifié':'Plat ajouté')}})}
 
 /* ---------- repas form & slot picker ---------- */
-function repasForm(id,onSaved){const r=id?R(id):null;const d={moment:r?.moment||'',slots:JSON.parse(JSON.stringify(r?.slots||{})),who:r?.who||'commun',mem:new Set(r?.members?.length?r.members:(r?.who==='enfant'?S.members.filter(m=>m.kind==='enfant').map(m=>m.id):[]))};let armed=false;
+function repasForm(id,onSaved){const r=id?R(id):null;const d={cond:new Set(r?.cond||[]),moment:r?.moment||'',slots:JSON.parse(JSON.stringify(r?.slots||{})),who:r?.who||'commun',mem:new Set(r?.members?.length?r.members:(r?.who==='enfant'?S.members.filter(m=>m.kind==='enfant').map(m=>m.id):[]))};let armed=false;
   openSheet(`<h2>${r?'Modifier le repas':'Nouveau repas'}</h2><p class="muted" style="margin:0 0 12px">Chaque case peut être un aliment ou un plat.</p><form id="f" novalidate>
   <fieldset style="margin:0 0 14px"><legend>Pour qui par défaut <span class="muted">(pré-coché dans le planning, modifiable chaque jour)</span></legend><div class="seg" id="who"></div></fieldset>
   <fieldset style="margin:0 0 14px"><legend>Moment</legend><div class="seg" id="rmom"></div></fieldset>
   <div id="slots"></div>
+  <div class="condrow" id="rcond"></div>
   <label>Nom du repas <span class="muted">(facultatif)</span><input id="fn" value="${esc(r?.name||'')}" autocomplete="off"></label>
   <p class="err" id="fe" role="alert"></p>
   <div class="actions">${r?'<button type="button" class="danger" id="fd">Supprimer</button>':''}<button type="button" class="ghost" data-close>Annuler</button><button class="primary">Enregistrer</button></div></form>`,root=>{
@@ -456,8 +473,10 @@ function repasForm(id,onSaved){const r=id?R(id):null;const d={moment:r?.moment||
       root.querySelector('#fn').placeholder=autoName(d)||'Nom automatique'};
     const drawWho=()=>{root.querySelector('#who').innerHTML=S.members.length?memToggles(d.mem):WHO.map(([k,l])=>`<button type="button" class="tog" data-who="${k}" aria-pressed="${d.who===k}">${l==='Commun'?'Commun (toute la famille)':'Juste pour l’enfant'}</button>`).join('')};
     const drawMom=()=>{root.querySelector('#rmom').innerHTML=MOM.map(([k,l])=>`<button type="button" class="tog" data-rmom="${k}" aria-pressed="${d.moment===k}">${l}</button>`).join('')};
-    drawWho();draw();drawMom();
-    root.onclick=e=>{const mo=e.target.closest('[data-rmom]');if(mo){d.moment=d.moment===mo.dataset.rmom?'':mo.dataset.rmom;drawMom();return}
+    const drawCond=()=>{root.querySelector('#rcond').innerHTML=`<span class="sl">Condiments</span>${condChips([...d.cond])}<button type="button" class="ghost" id="rcb">${d.cond.size?'Modifier':'+ Ajouter'}</button>`};
+    drawWho();draw();drawMom();drawCond();
+    root.onclick=e=>{if(e.target.id==='rcb'){condPicker(d.cond,drawCond);return}
+      const mo=e.target.closest('[data-rmom]');if(mo){d.moment=d.moment===mo.dataset.rmom?'':mo.dataset.rmom;drawMom();return}
       const wb=e.target.closest('[data-who]');if(wb){d.who=wb.dataset.who;drawWho();return}
       const mb=e.target.closest('[data-mem]');if(mb){const i=mb.dataset.mem;d.mem.has(i)?d.mem.delete(i):d.mem.add(i);drawWho();return}
       const s=e.target.closest('[data-slot]');if(s){slotPicker(s.dataset.slot,d,draw);return}
@@ -466,7 +485,7 @@ function repasForm(id,onSaved){const r=id?R(id):null;const d={moment:r?.moment||
     root.querySelector('#f').onsubmit=e=>{e.preventDefault();const slots={};for(const [s] of SLOTS)if(refObj(d.slots[s]))slots[s]={k:d.slots[s].k,id:d.slots[s].id};
       if(!Object.keys(slots).length){root.querySelector('#fe').textContent='Choisis au moins un élément.';return}
       const name=root.querySelector('#fn').value.trim()||autoName({slots});const cur=id&&R(id);let rid=id;
-      const members=[...d.mem].filter(M);if(cur)Object.assign(cur,{name,slots,who:d.who,members,moment:d.moment});else{rid=uid();S.repas.push({id:rid,name,slots,who:d.who,members,moment:d.moment})}
+      const members=[...d.mem].filter(M);const cond=[...d.cond].filter(i=>A(i));if(cur)Object.assign(cur,{name,slots,cond,who:d.who,members,moment:d.moment});else{rid=uid();S.repas.push({id:rid,name,slots,cond,who:d.who,members,moment:d.moment})}
       if(onSaved)onSaved(rid);persist();closeSheet(1);render();toast(cur?'Repas modifié':'Repas créé')}})}
 function slotPicker(slot,d,redraw){const hint=HINT[slot],platsFirst=['entree','plat','dessert'].includes(slot);
   openSheet(`<h2>${SL[slot]}</h2><input type="search" id="sq" placeholder="Chercher un aliment ou un plat" autocomplete="off" aria-label="Chercher"><div id="sl"></div><div class="actions"><button type="button" class="ghost" data-close>Fermer</button></div>`,root=>{
@@ -487,7 +506,7 @@ const fromKey=k=>{const [y,m,dd]=k.split('-').map(Number);return new Date(y,m-1,
 const cleanSlots=sl=>{const o={};for(const [s] of SLOTS){const x=sl&&sl[s];if(x&&refObj(x))o[s]={k:x.k,id:x.id}}return o};
 const normEntry=e=>{if(typeof e==='string')e={r:e};if(!e||typeof e!=='object')return null;const r=typeof e.r==='string'&&R(e.r)?e.r:null;
   const slots=e.slots&&typeof e.slots==='object'?cleanSlots(e.slots):r?cleanSlots(R(r).slots):null;if(!slots||!Object.keys(slots).length)return null;
-  return {id:typeof e.id==='string'?e.id:String(e.r),r,slots,members:Array.isArray(e.members)?e.members.filter(i=>typeof i==='string'):null}};
+  return {id:typeof e.id==='string'?e.id:String(e.r),r,slots,cond:Array.isArray(e.cond)?e.cond.filter(i=>A(i)):!e.slots&&r?(R(r).cond||[]).filter(i=>A(i)):[],members:Array.isArray(e.members)?e.members.filter(i=>typeof i==='string'):null}};
 const entriesAt=v=>(Array.isArray(v)?v:typeof v==='string'?[v]:[]).map(normEntry).filter(Boolean);
 const entryMembers=e=>(e.members||R(e.r)?.members||[]).filter(M);
 const sameSlots=(a,b)=>JSON.stringify(cleanSlots(a))===JSON.stringify(cleanSlots(b));
@@ -495,12 +514,12 @@ const mainSlot=e=>e.slots.plat?'plat':e.slots.proteine?'proteine':null;
 const lc=t=>t.charAt(0).toLowerCase()+t.slice(1);
 const withProt=e=>mainSlot(e)!=='proteine'&&!!refName(e.slots.proteine);
 const entryName=e=>!mainSlot(e)?(t=>t.charAt(0).toUpperCase()+t.slice(1))(entryRest(e))||'Repas':(refName(e.slots[mainSlot(e)])||'Repas')+(withProt(e)?' + '+lc(refName(e.slots.proteine)):'');
-const entryRest=e=>{const ms=mainSlot(e);return SLOTS.map(([s])=>s!==ms&&!(s==='proteine'&&withProt(e))?refName(e.slots[s]):'').filter(Boolean).map(lc).join(' · ')};
+const entryRest=e=>{const ms=mainSlot(e),c=(e.cond||[]).map(A).filter(Boolean).map(emo).join('');return [...SLOTS.map(([s])=>s!==ms&&!(s==='proteine'&&withProt(e))?refName(e.slots[s]):'').filter(Boolean).map(lc),c].filter(Boolean).join(' · ')};
 const idsAt=v=>entriesAt(v).map(e=>e.id);
 const slotEntries=(k,m)=>entriesAt(S.planning[k]?.[m]);
 const slotList=(k,m)=>idsAt(S.planning[k]?.[m]);
-const newEntry=rid=>{const r=R(rid);return {id:uid(),r:rid,slots:cleanSlots(r.slots),members:[...(r.members||[])].filter(M)}};
-function assign(k,m,list){const day={...(S.planning[k]||{})},seen=new Set();const l=(list||[]).map(x=>typeof x==='string'?(R(x)?newEntry(x):null):normEntry(x)).filter(e=>e&&!seen.has(e.id)&&seen.add(e.id)).map(e=>({id:e.id,r:e.r,slots:e.slots,members:entryMembers(e)}));if(l.length)day[m]=l;else delete day[m];if(Object.keys(day).length)S.planning[k]=day;else delete S.planning[k]}
+const newEntry=rid=>{const r=R(rid);return {id:uid(),r:rid,slots:cleanSlots(r.slots),cond:(r.cond||[]).filter(i=>A(i)),members:[...(r.members||[])].filter(M)}};
+function assign(k,m,list){const day={...(S.planning[k]||{})},seen=new Set();const l=(list||[]).map(x=>typeof x==='string'?(R(x)?newEntry(x):null):normEntry(x)).filter(e=>e&&!seen.has(e.id)&&seen.add(e.id)).map(e=>({id:e.id,r:e.r,slots:e.slots,cond:e.cond,members:entryMembers(e)}));if(l.length)day[m]=l;else delete day[m];if(Object.keys(day).length)S.planning[k]=day;else delete S.planning[k]}
 const slotRows=(slots,key)=>SLOTS.map(([s,l])=>{const o=refObj(slots[s]);return `<div class="slotrow"><button type="button" class="slotbtn" data-eslot="${esc(key)}|${s}"><span class="sl">${l}</span>${o?(slots[s].k==='a'?emoHtml(o):'<span class="pl">Plat</span>')+`<span>${esc(o.name)}</span>`:'<span class="muted">Choisir…</span>'}</button>${o?`<button type="button" class="x" data-eclear="${esc(key)}|${s}" aria-label="Retirer ${l}">×</button>`:''}</div>`}).join('');
 function planPick(k,m){const label=`${m==='midi'?'Midi':'Soir'}, ${fromKey(k).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}`;let draft=null,mf=m;
   openSheet(`<h2>${esc(label)}</h2><p class="muted" style="margin:0">Compose le repas case par case, ou pars d’un repas enregistré et change ce que tu veux (ex. le brassé).</p><div id="prs"></div><div id="pdraft"></div>
@@ -514,6 +533,7 @@ function planPick(k,m){const label=`${m==='midi'?'Midi':'Soir'}, ${fromKey(k).to
       const out=ents.map(e=>{const em=new Set(entryMembers(e)),mod=!e.r||!R(e.r)||!sameSlots(e.slots,R(e.r).slots);
         return `<div class="entry"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="flex:1">${mainSlot(e)?`<strong>${esc(entryName(e))}</strong>${entryRest(e)?`<br><span class="muted" style="font-size:14px">${esc(entryRest(e))}</span>`:''}`:`<span class="muted">${esc(entryRest(e))}</span>`}</span><button type="button" class="x" data-edel="${esc(e.id)}" aria-label="Retirer ce repas">×</button></div>
         ${slotRows(e.slots,e.id)}
+        <div class="condrow"><span class="sl">Condiments</span>${condChips(e.cond)}<button type="button" class="ghost" data-econd="${esc(e.id)}">${(e.cond||[]).length?'Modifier':'+ Ajouter'}</button></div>
         ${S.members.length?`<div class="seg" style="margin:8px 0">${S.members.map(x=>`<button type="button" class="tog" data-emem="${esc(e.id)}|${esc(x.id)}" aria-pressed="${em.has(x.id)}">${esc(x.name)}</button>`).join('')}</div><p class="muted" style="margin:0 0 8px;font-size:14px">${em.size?portions([...em]).toLocaleString('fr-FR')+' portion'+(portions([...em])>1?'s':''):'Personne de coché = toute la famille'}</p>`:''}
         <div class="resterow"><button type="button" class="ghost" data-reste="${esc(e.id)}">+ Prévoir un reste</button>${mod?`<button type="button" class="ghost" data-esave="${esc(e.id)}">Enregistrer comme repas</button>`:''}${restesFrom(k,m,e.id).map(x=>`<span class="chip">Reste ${esc(slotLabel(x.to.k,x.to.m))}${forTxt(x.members)?' · '+esc(forTxt(x.members)):''} <button type="button" class="chipx" data-rdel="${esc(x.id)}" aria-label="Retirer ce reste">×</button></span>`).join('')}</div></div>`}).join('');
       const inn=restesTo(k,m).map(x=>`<span class="chip">Reste de « ${esc(resteName(x))} » (${esc(slotLabel(x.from.k,x.from.m))})${forTxt(x.members)?' · '+esc(forTxt(x.members)):''} <button type="button" class="chipx" data-rdel="${esc(x.id)}" aria-label="Retirer ce reste">×</button></span>`).join('');
@@ -529,10 +549,11 @@ function planPick(k,m){const label=`${m==='midi'?'Midi':'Soir'}, ${fromKey(k).to
         const x=slotEntries(k,m).find(y=>y.id===eid);if(!x)return;const ref=x.slots[slot];if(ref&&refObj(ref)){sheetBack=()=>planPick(k,m);if(ref.k==='p')platForm(ref.id);else alimentForm(ref.id);return}const d={slots:{...x.slots}};slotPicker(slot,d,()=>upd(eid,y=>{y.slots=d.slots;return y}));return}
       const ec=e.target.closest('[data-eclear]');if(ec){const [eid,slot]=ec.dataset.eclear.split('|');if(eid==='draft'){delete draft.slots[slot];draw();return}
         const x=slotEntries(k,m).find(y=>y.id===eid);if(x&&Object.keys(x.slots).length<=1){toast('Retire le repas avec × en haut de sa carte');return}upd(eid,y=>{delete y.slots[slot];return y});return}
+      const eco=e.target.closest('[data-econd]');if(eco){const x=slotEntries(k,m).find(y=>y.id===eco.dataset.econd);if(!x)return;const set=new Set(x.cond||[]);condPicker(set,()=>upd(x.id,y=>{y.cond=[...set];return y}));return}
       const ed=e.target.closest('[data-edel]');if(ed){const id=ed.dataset.edel;closeSheet(1);withUndo('Repas retiré du créneau',()=>{assign(k,m,slotEntries(k,m).filter(x=>x.id!==id));S.restes=S.restes.filter(x=>!(x.rid===id&&x.from.k===k&&x.from.m===m))});planPick(k,m);return}
       const sv=e.target.closest('[data-esave]');if(sv){const x=slotEntries(k,m).find(y=>y.id===sv.dataset.esave);if(!x)return;
         openSheet(`<h2>Enregistrer comme repas</h2><p class="muted" style="margin:0">${esc([entryName(x),entryRest(x)].filter(Boolean).join(' · '))}</p><label>Nom du repas<input id="rn" value="${esc([entryName(x),entryRest(x)].filter(Boolean).join(', '))}" autocomplete="off"></label><div class="actions"><button type="button" class="ghost" data-close>Annuler</button><button type="button" class="primary" id="rns">Enregistrer</button></div>`,r2=>{const i=r2.querySelector('#rn');try{i.focus();i.select()}catch(_){}
-          const go=()=>{const name=i.value.trim()||entryName(x);const rid=uid();S.repas.push({id:rid,name,slots:cleanSlots(x.slots),who:'commun',members:[],moment:m});closeSheet(2);upd(x.id,y=>{y.r=rid;return y});toast(`Repas « ${name} » enregistré`)};
+          const go=()=>{const name=i.value.trim()||entryName(x);const rid=uid();S.repas.push({id:rid,name,slots:cleanSlots(x.slots),cond:[...(x.cond||[])],who:'commun',members:[],moment:m});closeSheet(2);upd(x.id,y=>{y.r=rid;return y});toast(`Repas « ${name} » enregistré`)};
           r2.querySelector('#rns').onclick=go;i.onkeydown=ev=>{if(ev.key==='Enter'){ev.preventDefault();go()}}},2);return}
       const rb=e.target.closest('[data-reste]');if(rb){resteSheet(k,m,rb.dataset.reste,draw);return}
       const rd=e.target.closest('[data-rdel]');if(rd){S.restes=S.restes.filter(x=>x.id!==rd.dataset.rdel);persist();render();draw();return}
@@ -567,13 +588,13 @@ let clip=null;
 function weekDays(off){const now=new Date();now.setHours(0,0,0,0);const ws=new Date(now);ws.setDate(now.getDate()-((now.getDay()+6)%7)+off*7);return [...Array(7)].map((_,i)=>{const d=new Date(ws);d.setDate(ws.getDate()+i);return d})}
 const daysFrom=(k0,n)=>[...Array(n)].map((_,i)=>{const d=fromKey(k0);d.setDate(d.getDate()+i);return keyOf(d)});
 function readDays(k0,n){const keys=daysFrom(k0,n);
-  const days=keys.map(k=>{const o={};for(const [m] of MOMENTS){const l=slotEntries(k,m).map(e=>({id:e.id,r:e.r,slots:e.slots,members:entryMembers(e)}));if(l.length)o[m]=l}return o});
+  const days=keys.map(k=>{const o={};for(const [m] of MOMENTS){const l=slotEntries(k,m).map(e=>({id:e.id,r:e.r,slots:e.slots,cond:e.cond,members:entryMembers(e)}));if(l.length)o[m]=l}return o});
   const restes=S.restes.filter(x=>resteOk(x)&&keys.includes(x.from.k)&&keys.includes(x.to.k)).map(x=>({rid:x.rid,from:{d:keys.indexOf(x.from.k),m:x.from.m},to:{d:keys.indexOf(x.to.k),m:x.to.m},members:[...x.members]}));
   return {days,restes}}
 // sel = créneaux choisis [[jour, moment]…] (jour compté depuis k0) ; le modèle commence au premier jour choisi
 function readSlots(k0,sel){const d0=Math.min(...sel.map(x=>x[0])),n=Math.max(...sel.map(x=>x[0]))-d0+1,keys=daysFrom(daysFrom(k0,d0+1)[d0],n);
   const on=new Set(sel.map(([d,m])=>(d-d0)+'|'+m)),inSel=(k,m)=>keys.includes(k)&&on.has(keys.indexOf(k)+'|'+m);
-  const days=keys.map((k,i)=>{const o={};for(const [m] of MOMENTS){if(!on.has(i+'|'+m))continue;const l=slotEntries(k,m).map(e=>({id:e.id,r:e.r,slots:e.slots,members:entryMembers(e)}));if(l.length)o[m]=l}return o});
+  const days=keys.map((k,i)=>{const o={};for(const [m] of MOMENTS){if(!on.has(i+'|'+m))continue;const l=slotEntries(k,m).map(e=>({id:e.id,r:e.r,slots:e.slots,cond:e.cond,members:entryMembers(e)}));if(l.length)o[m]=l}return o});
   const restes=S.restes.filter(x=>resteOk(x)&&inSel(x.from.k,x.from.m)&&inSel(x.to.k,x.to.m)).map(x=>({rid:x.rid,from:{d:keys.indexOf(x.from.k),m:x.from.m},to:{d:keys.indexOf(x.to.k),m:x.to.m},members:[...x.members]}));
   return {days,restes,slots:[...on]}}
 function writeDays(k0,tpl){const n=tpl.days.length,keys=daysFrom(k0,n),ids=new Map(),cov=(i,m)=>!tpl.slots||tpl.slots.includes(i+'|'+m);
@@ -640,7 +661,9 @@ function coursesSheet(){const days=weekDays(ui.week),wk=keyOf(days[0]);const cs=
       const add=(map,id,q,por)=>{const e=map.get(id)||{c:0,p:0,u:new Map()};e.c++;e.p+=por;if(q)e.u.set(q.u,(e.u.get(q.u)||0)+q.n*por);map.set(id,e)};
       for(const d of days){const k=keyOf(d);for(const [m] of MOMENTS)for(const en of slotEntries(k,m)){const r=en;const por=portions(entryMembers(en))+restesFrom(k,m,en.id).reduce((n,x)=>n+portions(x.members),0);
         for(const [s] of SLOTS){const ref=r.slots[s],o=refObj(ref);if(!o)continue;
-          if(ref.k==='a')add(al,o.id,o.qty,por);else if(o.origin==='toutfait')add(ready,o.id,null,por);else o.alimentIds.filter(A).forEach(i=>add(al,i,o.qty&&o.qty[i],por))}}}
+          if(ref.k==='a')add(al,o.id,o.qty,por);else if(o.origin==='toutfait')add(ready,o.id,null,por);else o.alimentIds.filter(A).forEach(i=>add(al,i,o.qty&&o.qty[i],por))}
+        for(const i of r.cond||[])if(A(i))add(al,i,null,por)}}
+      for(const a of S.aliments)if(PINCH(a)&&!inStock('a:'+a.id)&&!al.has(a.id))al.set(a.id,{c:0,p:0,u:new Map()});
       return {al,ready}};
     const amount=(e,ready)=>ready?(e.p===1?'1 portion':e.p.toLocaleString('fr-FR')+' portions'):e.u.size?[...e.u].map(([u,n])=>fmtQ(n,u)).join(' + '):(e.c>1?'×'+e.c:'');
     // quantité ajustable : base théorique + pas du bouton + affichage
@@ -648,27 +671,30 @@ function coursesSheet(){const days=weekDays(ui.week),wk=keyOf(days[0]);const cs=
       if(e.u.size){const [[u,n],...o]=[...e.u];const step=u==='g'?50:u==='ml'?100:1,base=step===1?Math.ceil(n-1e-9):n;return {def,base,step,fmt:v=>[fmtQ(v,u),...o.map(([u2,n2])=>fmtQ(n2,u2))].join(' + ')}}
       return {def,base:e.c,step:1,fmt:v=>'×'+v}};
     let lines=[];
-    const draw=()=>{const {al,ready}=build();lines=[];const ck=new Set(cs.checked);
-      const item=(key,name,ms)=>{const on=ck.has(key),dl=ms?(cs.adj[key]||0):0,v=ms?Math.max(0,ms.base+dl):0,txt=!ms?'':dl?ms.fmt(v):ms.def,zero=ms&&dl&&v<=0;
+    const draw=()=>{const {al,ready}=build();lines=[];const ck=new Set(cs.checked),stocked=[];
+      const item=(key,name,ms)=>{if(!key.startsWith('x:')&&inStock(key)){stocked.push({key,name});return ''}const on=ck.has(key),dl=ms?(cs.adj[key]||0):0,v=ms?Math.max(0,ms.base+dl):0,txt=!ms?'':dl?ms.fmt(v):ms.def,zero=ms&&dl&&v<=0;
         if(!on&&!zero)lines.push(name+(txt?` : ${txt}`:''));
-        return `<li><label class="ck${on?' done':''}${zero?' zero':''}"><input type="checkbox" data-ck="${esc(key)}" ${on?'checked':''}><span>${key.startsWith('a:')&&A(key.slice(2))?emo(A(key.slice(2)))+' ':''}${esc(name)}${dl?`<br><small class="theo">prévu : ${esc(ms.def||ms.fmt(ms.base))} · <button type="button" class="link" data-adjr="${esc(key)}">annuler l’ajustement</button></small>`:''}</span>${zero?'<span class="amt muted">déjà là</span>':txt?`<span class="amt">${esc(txt)}</span>`:''}</label>${ms?`<span class="adj"><button type="button" class="pm" data-adj="${esc(key)}" data-d="${-ms.step}" aria-label="Moins de ${esc(name)}">−</button><button type="button" class="pm" data-adj="${esc(key)}" data-d="${ms.step}" aria-label="Plus de ${esc(name)}">+</button></span>`:''}</li>`};
+        return `<li><label class="ck${on?' done':''}${zero?' zero':''}"><input type="checkbox" data-ck="${esc(key)}" ${on?'checked':''}><span>${key.startsWith('a:')&&A(key.slice(2))?emo(A(key.slice(2)))+' ':''}${esc(name)}${dl?`<br><small class="theo">prévu : ${esc(ms.def||ms.fmt(ms.base))} · <button type="button" class="link" data-adjr="${esc(key)}">annuler l’ajustement</button></small>`:''}</span>${zero?'<span class="amt muted">déjà là</span>':txt?`<span class="amt">${esc(txt)}</span>`:''}</label>${ms?`<span class="adj"><button type="button" class="pm" data-adj="${esc(key)}" data-d="${-ms.step}" aria-label="Moins de ${esc(name)}">−</button><button type="button" class="pm" data-adj="${esc(key)}" data-d="${ms.step}" aria-label="Plus de ${esc(name)}">+</button></span>`:''}${key.startsWith('x:')?'':`<button type="button" class="pm" data-stock="${esc(key)}" aria-label="${esc(name)} en stock" title="En stock">🏠</button>`}</li>`};
       let h=`<div class="seg" style="margin:12px 0 0"><button type="button" class="tog" data-cg="shop" aria-pressed="${ui.cg!=='type'}">Par magasin</button><button type="button" class="tog" data-cg="type" aria-pressed="${ui.cg==='type'}">Par type</button></div>`;const h0=h;
       if(ui.cg!=='type'){const groups=new Map();const put=(shop,key,name,txt,t)=>{const g=shop||'';if(!groups.has(g))groups.set(g,[]);groups.get(g).push({key,name,txt,t})};
-        for(const id of al.keys()){const a=A(id);if(a)put(a.shop,'a:'+a.id,a.name,meas(al.get(id)),TYPES.findIndex(x=>x[0]===a.type))}
+        for(const id of al.keys()){const a=A(id);if(a)put(a.shop,'a:'+a.id,a.name,PINCH(a)?null:meas(al.get(id)),TYPES.findIndex(x=>x[0]===a.type))}
         for(const id of ready.keys()){const p=P(id);if(p)put(p.shop,'p:'+p.id,p.name,meas(ready.get(id),1),98)}
         const order=[...groups.keys()].sort((a,b)=>(a===''?1:0)-(b===''?1:0)||a.localeCompare(b,'fr'));
-        for(const g of order){const arr=groups.get(g).sort((x,y)=>x.t-y.t||x.name.localeCompare(y.name,'fr'));lines.push('','#'+(g||'Sans magasin'));h+=`<h3>${esc(g||'Sans magasin')}</h3><ul class="cklist">${arr.map(x=>item(x.key,x.name,x.txt)).join('')}</ul>`}
+        for(const g of order){const arr=groups.get(g).sort((x,y)=>x.t-y.t||x.name.localeCompare(y.name,'fr'));const b0=lines.length,inner=arr.map(x=>item(x.key,x.name,x.txt)).join('');if(!inner)continue;lines.splice(b0,0,'','#'+(g||'Sans magasin'));h+=`<h3>${esc(g||'Sans magasin')}</h3><ul class="cklist">${inner}</ul>`}
       }else{
-      for(const [t,l] of TYPES){const arr=byName([...al.keys()].map(A).filter(a=>a&&a.type===t));if(!arr.length)continue;lines.push('','#'+pl(l));h+=`<h3 class="t-${t}" style="display:flex;gap:8px;align-items:center"><span class="dot"></span>${pl(l)}</h3><ul class="cklist">${arr.map(a=>item('a:'+a.id,a.name,meas(al.get(a.id)))).join('')}</ul>`}
-      const rp=byName([...ready.keys()].map(P).filter(Boolean));if(rp.length){lines.push('','#Plats tout faits');h+=`<h3>Plats tout faits</h3><ul class="cklist">${rp.map(p=>item('p:'+p.id,p.name,meas(ready.get(p.id),1))).join('')}</ul>`}}
+      for(const [t,l] of TYPES){const arr=byName([...al.keys()].map(A).filter(a=>a&&a.type===t));if(!arr.length)continue;const b0=lines.length,inner=arr.map(a=>item('a:'+a.id,a.name,PINCH(a)?null:meas(al.get(a.id)))).join('');if(!inner)continue;lines.splice(b0,0,'','#'+pl(l));h+=`<h3 class="t-${t}" style="display:flex;gap:8px;align-items:center"><span class="dot"></span>${pl(l)}</h3><ul class="cklist">${inner}</ul>`}
+      const rp=byName([...ready.keys()].map(P).filter(Boolean));if(rp.length){const b0=lines.length,inner=rp.map(p=>item('p:'+p.id,p.name,meas(ready.get(p.id),1))).join('');if(inner){lines.splice(b0,0,'','#Plats tout faits');h+=`<h3>Plats tout faits</h3><ul class="cklist">${inner}</ul>`}}}
       if(cs.extra.length){lines.push('','#En plus');h+=`<h3>En plus</h3><ul class="cklist">${cs.extra.map((x,i)=>item('x:'+x,x,'').replace('</label></li>',`</label><button type="button" class="x" data-xdel="${i}" aria-label="Retirer ${esc(x)}">×</button></li>`)).join('')}</ul>`}
+      if(stocked.length)h+=`<h3>En stock <span class="muted">${stocked.length}</span></h3><p class="muted" style="margin:0 0 8px;font-size:14px">Pas dans la liste. Touche « Plus en stock » si tu en manques.</p><ul class="cklist">${stocked.sort((x,y)=>x.name.localeCompare(y.name,'fr')).map(x=>{const a=keyA(x.key);return `<li><span class="ck instock"><span>${a?emo(a)+' ':''}${esc(x.name)}<br><small class="theo">${esc(stockTxt(x.key))}</small></span></span><button type="button" class="ghost" data-unstock="${esc(x.key)}">Plus en stock</button></li>`}).join('')}</ul>`;
       if(h===h0&&!cs.extra.length)h='';
       root.querySelector('#cl').innerHTML=h||'<p class="empty" style="margin-top:14px">Aucun repas prévu cette semaine. Remplis le planning, la liste se fera toute seule.</p>'};
     draw();
-    root.onchange=e=>{const c=e.target.closest('[data-ck]');if(!c)return;const k=c.dataset.ck;cs.checked=cs.checked.filter(x=>x!==k);if(c.checked)cs.checked.push(k);save();draw()};
+    root.onchange=e=>{const c=e.target.closest('[data-ck]');if(!c)return;const k=c.dataset.ck;{const a=keyA(k);if(c.checked&&a&&PINCH(a)){setStock(k,true);persist();toast(a.name+' remis en stock');draw();render();return}}cs.checked=cs.checked.filter(x=>x!==k);if(c.checked)cs.checked.push(k);save();draw()};
     const addX=()=>{const i=root.querySelector('#cx'),v=i.value.trim();if(!v)return;if(!cs.extra.includes(v))cs.extra.push(v);i.value='';save();draw()};
     root.querySelector('#cxb').onclick=addX;root.querySelector('#cx').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();addX()}};
     root.onclick=e=>{const x=e.target.closest('[data-xdel]');if(x){const v=cs.extra[+x.dataset.xdel];cs.extra.splice(+x.dataset.xdel,1);cs.checked=cs.checked.filter(k=>k!=='x:'+v);save();draw();return}
+      const sk=e.target.closest('[data-stock]');if(sk){setStock(sk.dataset.stock,true);persist();draw();render();return}
+      const us=e.target.closest('[data-unstock]');if(us){setStock(us.dataset.unstock,false);persist();draw();render();return}
       const aj=e.target.closest('[data-adj]');if(aj){e.preventDefault();const k2=aj.dataset.adj,nv=Math.round(((cs.adj[k2]||0)+Number(aj.dataset.d))*100)/100;if(nv)cs.adj[k2]=nv;else delete cs.adj[k2];save();draw();return}
       const ar=e.target.closest('[data-adjr]');if(ar){e.preventDefault();delete cs.adj[ar.dataset.adjr];save();draw();return}
       const cg=e.target.closest('[data-cg]');if(cg){ui.cg=cg.dataset.cg;draw();return}
@@ -727,7 +753,7 @@ planning:{title:'Planning',sub:()=>'Midi et soir, semaine par semaine',shell:()=
   const now=new Date();now.setHours(0,0,0,0);const ws=new Date(now);ws.setDate(now.getDate()-((now.getDay()+6)%7)+ui.week*7);
   const days=[...Array(7)].map((_,i)=>{const d=new Date(ws);d.setDate(ws.getDate()+i);return d});const tk=keyOf(now);
   const f=d=>d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
-  return `<div class="weeknav"><button type="button" data-week="-1" aria-label="Semaine précédente">‹</button><div><strong>Du ${f(days[0])} au ${f(days[6])}</strong>${ui.week?'<button type="button" class="link" data-week="0">Revenir à cette semaine</button>':'<span class="muted">Cette semaine</span>'}</div><button type="button" data-week="1" aria-label="Semaine suivante">›</button></div><div class="weektools"><button type="button" class="primary" data-courses>Liste de courses</button><button type="button" class="ghost" data-wsheet>Modèles et copier / coller</button>${clip?`<button type="button" class="ghost" data-wpaste>Coller (${tplLen(clip)}) à partir de lundi</button>`:''}</div>${S.members.length>1?`<div class="filters" style="margin:0 0 10px">${S.members.map(x=>`<button type="button" class="fchip" data-pmemf="${esc(x.id)}" aria-pressed="${ui.pmem===x.id}" style="--c:${memCol(x.name)}">${esc(x.name)}</button>`).join('')}</div>`:''}`+
+  return `<div class="weeknav"><button type="button" data-week="-1" aria-label="Semaine précédente">‹</button><div><strong>Du ${f(days[0])} au ${f(days[6])}</strong>${ui.week?'<button type="button" class="link" data-week="0">Revenir à cette semaine</button>':'<span class="muted">Cette semaine</span>'}</div><button type="button" data-week="1" aria-label="Semaine suivante">›</button></div><div class="weektools"><button type="button" class="primary" data-courses>Liste de courses</button><button type="button" class="ghost" data-wsheet>Modèles et copier / coller</button><button type="button" class="ghost" data-wclear>Vider la semaine</button>${clip?`<button type="button" class="ghost" data-wpaste>Coller (${tplLen(clip)}) à partir de lundi</button>`:''}</div>${S.members.length>1?`<div class="filters" style="margin:0 0 10px">${S.members.map(x=>`<button type="button" class="fchip" data-pmemf="${esc(x.id)}" aria-pressed="${ui.pmem===x.id}" style="--c:${memCol(x.name)}">${esc(x.name)}</button>`).join('')}</div>`:''}`+
   days.map(d=>{const k=keyOf(d);return `<section class="day${k===tk?' today':''}"><h3>${d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}${k===tk?' <span class="muted">· aujourd’hui</span>':''}<button type="button" class="dayact" data-dayact="${k}" aria-label="Copier, coller ou enregistrer ce jour">⋯</button></h3>${MOMENTS.map(([m,ml])=>{const pf=x=>!ui.pmem||!M(ui.pmem)||!x.length||x.includes(ui.pmem);const rs=slotEntries(k,m).filter(e=>pf(entryMembers(e))),lo=restesTo(k,m).filter(x=>pf(x.members.filter(M)));
     return `<button type="button" class="meal" data-day="${k}" data-moment="${m}"><span class="mlabel">${ml}</span>${rs.length||lo.length?`<span class="mlist">${slotItems(rs,lo)}</span>`:'<span class="mbody muted">+ Choisir un repas</span>'}</button>`}).join('')}</section>`}).join('')}},
 repas:{title:'Repas complets',sub:()=>`${S.repas.length} repas enregistrés · à placer puis ajuster dans le planning`,shell:()=>`<div class="tools">${search('Chercher un repas')}<div class="filters"></div></div><div id="list"></div>`,list:()=>{
@@ -746,7 +772,7 @@ aliments:{title:'Aliments',sub:()=>`${S.aliments.length} aliments`,shell:()=>`<d
   if(!S.aliments.length)return `<div class="empty"><p>Ta liste d’aliments est vide. Ajoute les tiens avec le bouton +, ou ajoute d’un coup tes listes papier : 48 aliments et 32 plats, que tu pourras modifier.</p><button type="button" class="primary" data-starter>Ajouter mes listes</button></div>`;
   const q=norm(ui.q.aliments);let h='';
   for(const [k,l] of TYPES){if(ui.tf&&ui.tf!==k)continue;const arr=byName(S.aliments.filter(a=>a.type===k&&(!q||norm(a.name).includes(q))));if(!arr.length)continue;
-    h+=`<section class="group"><h2 class="t-${k}"><span class="dot"></span>${pl(l)} <span class="muted">${arr.length}</span></h2><ul class="list">${arr.map(a=>{const n=S.plats.filter(p=>p.alimentIds.includes(a.id)).length;return `<li><button type="button" class="row" data-open-al="${esc(a.id)}">${emoHtml(a)}<span class="rmain"><strong>${esc(a.name)}</strong></span><span class="muted">${[a.shop,n?n+' plat'+(n>1?'s':''):''].filter(Boolean).map(esc).join(' · ')}</span></button></li>`}).join('')}</ul></section>`}
+    h+=`<section class="group"><h2 class="t-${k}"><span class="dot"></span>${pl(l)} <span class="muted">${arr.length}</span></h2><ul class="list">${arr.map(a=>{const n=S.plats.filter(p=>p.alimentIds.includes(a.id)).length;return `<li><button type="button" class="row" data-open-al="${esc(a.id)}">${emoHtml(a)}<span class="rmain"><strong>${esc(a.name)}${PINCH(a)?(inStock('a:'+a.id)?'':' <span class="cat" style="--c:#c0392b">épuisé</span>'):inStock('a:'+a.id)?' <span class="cat">en stock</span>':''}</strong></span><span class="muted">${[a.shop,n?n+' plat'+(n>1?'s':''):''].filter(Boolean).map(esc).join(' · ')}</span></button></li>`}).join('')}</ul></section>`}
   return h||'<p class="muted">Aucun aliment ne correspond.</p>'}}};
 let route=location.hash.slice(1);if(!V[route])route='planning';
 function drawList(){const el=$('#list');if(el)el.innerHTML=V[route].list()}
@@ -777,6 +803,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-close],but
   if(ds.dayact){daySheet(ds.dayact);return}
   if(ds.day){planPick(ds.day,ds.moment);return}
   if('wsheet' in ds){weekSheet();return}
+  if('wclear' in ds){const b=e.target.closest('[data-wclear]');if(!b.dataset.armed){b.dataset.armed='1';b.textContent='Confirmer : tout vider ?';b.classList.add('danger');setTimeout(()=>{if(b.isConnected){delete b.dataset.armed;b.textContent='Vider la semaine';b.classList.remove('danger')}},4000);return}writeWeek(ui.week,null,'Semaine vidée');return}
   if('courses' in ds){coursesSheet();return}
   if('wpaste' in ds&&clip){writeWeek(ui.week,clip,'Collé');return}
   if('starter' in ds){starter();return}});
