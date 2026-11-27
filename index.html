@@ -95,7 +95,7 @@ h2{font-size:24px;line-height:1.15;margin:0 0 4px}h3{font-size:17px;margin:20px 
 .dayact{margin-left:auto;border:0;background:none;font-size:22px;line-height:1;padding:2px 10px;color:var(--mute);border-radius:8px;min-height:36px}.day h3::first-letter{text-transform:uppercase}
 .meal{display:flex;gap:12px;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:transparent;padding:11px 2px;min-height:52px;align-items:flex-start}
 .mlist{flex:1;display:flex;flex-direction:column;gap:8px}
-.mlabel{width:42px;flex:none;font-weight:500;color:var(--mute)}
+.meal.matin{min-height:34px;padding:6px 2px;font-size:14px;opacity:.85}.meal.matin .mlabel{font-weight:400}.mlabel{width:46px;flex:none;font-weight:500;color:var(--mute)}
 .mbody{display:flex;flex-direction:column;font-size:15px}.mbody strong{font-weight:500;font-size:16px}
 .empty{background:var(--card);border:1.5px dashed var(--line);border-radius:16px;padding:20px;text-align:center}
 .empty p{margin:0 0 14px}
@@ -155,7 +155,7 @@ const TL=Object.fromEntries(TYPES);
 const SLOTS=[['entree','Entrée'],['plat','Plat'],['proteine','Protéine'],['laitage','Laitage'],['dessert','Dessert']];
 const SL=Object.fromEntries(SLOTS);
 const HINT={entree:['legume','fruit'],plat:['feculent','legume','proteine','legumineuse'],proteine:['proteine','legumineuse'],laitage:['laitage'],dessert:['fruit','laitage']};
-const MOM=[['midi','Midi'],['soir','Soir'],['both','Midi et soir']];const ML=Object.fromEntries(MOM);
+const MOM=[['matin','Matin'],['midi','Midi'],['soir','Soir'],['both','Midi et soir']];const ML=Object.fromEntries(MOM);
 const ORIG=[['maison','Maison'],['toutfait','Tout fait']];const OL=Object.fromEntries(ORIG);
 const WHO=[['commun','Commun'],['enfant','Enfant']];const WL=Object.fromEntries(WHO);
 const M=id=>S.members.find(m=>m.id===id);
@@ -177,7 +177,7 @@ function shopPicker(root,box,get,set){const draw=()=>{const cur=get();box.innerH
   box.addEventListener('click',e=>{const b=e.target.closest('[data-shop]');if(b){e.stopPropagation();set(b.dataset.shop);draw()}});draw()}
 const forMember=(x,id)=>!(x.members||[]).filter(M).length||x.members.includes(id);
 const memToggles=set=>S.members.length?`<div class="seg">${S.members.map(m=>`<button type="button" class="tog" data-mem="${esc(m.id)}" aria-pressed="${set.has(m.id)}">${esc(m.name)} <span class="muted">${m.kind==='enfant'?'enfant':'adulte'}</span></button>`).join('')}</div><p class="muted" style="margin:6px 0 0;font-size:14px">Personne de coché = toute la famille.</p>`:'<p class="muted" style="margin:0">Déclare ta famille avec le menu ⋯ en haut à droite pour choisir qui mange quoi.</p>';
-const MOMENTS=[['midi','Midi'],['soir','Soir']];
+const MOMENTS=[['matin','Matin'],['midi','Midi'],['soir','Soir']];const MOMI=m=>MOMENTS.findIndex(x=>x[0]===m);const MOML=m=>(MOMENTS.find(x=>x[0]===m)||['',''])[1];
 // Plat types: p = "Gratin de courgette", s = "Courgette vapeur"
 const CATS=[{id:'soupe',label:'Soupe',p:'Soupe'},{id:'gratin',label:'Gratin',p:'Gratin'},{id:'vapeur',label:'Vapeur',s:'vapeur'},{id:'poele',label:'Poêlé',s:'à la poêle'},{id:'four',label:'Au four',s:'au four'},{id:'salade',label:'Salade',p:'Salade'},{id:'puree',label:'Purée',p:'Purée'},{id:'mijote',label:'Mijoté',p:'Mijoté'},{id:'plancha',label:'Plancha',s:'à la plancha'}];
 const LS='platsrepas.v1';
@@ -194,11 +194,11 @@ function clean(d){const s=empty();if(d&&typeof d==='object'){for(const k of['ali
   s.aliments=s.aliments.map(a=>({id:a.id,name:String(a.name||''),type:TL[a.type]?a.type:'legume',qty:qOk(a.qty),shop:typeof a.shop==='string'?a.shop.slice(0,60):'',emoji:typeof a.emoji==='string'?a.emoji.trim().slice(0,12):'',pw:Number(a.pw)>0&&Number(a.pw)<5000?Number(a.pw):0}));
   s.plats=s.plats.map(p=>({id:p.id,name:String(p.name||''),description:String(p.description||''),alimentIds:Array.isArray(p.alimentIds)?p.alimentIds.filter(x=>typeof x==='string'):[],cat:typeof p.cat==='string'?p.cat:'',origin:['maison','toutfait'].includes(p.origin)?p.origin:'',moment:ML[p.moment]?p.moment:'',shop:typeof p.shop==='string'?p.shop.slice(0,60):'',fav:!!p.fav,qty:Object.fromEntries(Object.entries(p.qty&&typeof p.qty==='object'?p.qty:{}).map(([k,v])=>[k,qOk(v)]).filter(([k,v])=>v))}));
   s.repas=s.repas.map(r=>({id:r.id,name:String(r.name||''),moment:ML[r.moment]?r.moment:'',who:r.who==='enfant'?'enfant':'commun',slots:r.slots&&typeof r.slots==='object'?r.slots:{},cond:Array.isArray(r.cond)?r.cond.filter(i=>typeof i==='string'):[]}));
-  const dOk=x=>x&&Number.isInteger(x.d)&&x.d>=0&&x.d<7&&(x.m==='midi'||x.m==='soir');
-  s.weeks=s.weeks.map(w=>({id:w.id,name:String(w.name||'Semaine'),days:Array.isArray(w.days)?w.days.slice(0,7).map(d=>d&&typeof d==='object'?{midi:d.midi,soir:d.soir}:{}):[],restes:Array.isArray(w.restes)?w.restes.filter(x=>x&&typeof x.rid==='string'&&dOk(x.from)&&dOk(x.to)).map(x=>({rid:x.rid,from:{d:x.from.d,m:x.from.m},to:{d:x.to.d,m:x.to.m},members:Array.isArray(x.members)?x.members.filter(i=>typeof i==='string'):[]})):[],...(Array.isArray(w.slots)?{slots:w.slots.filter(x=>typeof x==='string'&&/^\d\|(midi|soir)$/.test(x))}:{})})).filter(w=>w.days.length);
+  const dOk=x=>x&&Number.isInteger(x.d)&&x.d>=0&&x.d<7&&MOMI(x.m)>=0;
+  s.weeks=s.weeks.map(w=>({id:w.id,name:String(w.name||'Semaine'),days:Array.isArray(w.days)?w.days.slice(0,7).map(d=>d&&typeof d==='object'?{matin:d.matin,midi:d.midi,soir:d.soir}:{}):[],restes:Array.isArray(w.restes)?w.restes.filter(x=>x&&typeof x.rid==='string'&&dOk(x.from)&&dOk(x.to)).map(x=>({rid:x.rid,from:{d:x.from.d,m:x.from.m},to:{d:x.to.d,m:x.to.m},members:Array.isArray(x.members)?x.members.filter(i=>typeof i==='string'):[]})):[],...(Array.isArray(w.slots)?{slots:w.slots.filter(x=>typeof x==='string'&&/^\d\|(matin|midi|soir)$/.test(x))}:{})})).filter(w=>w.days.length);
   s.mig=Number(d&&d.mig)||0;
   s.shops=d&&Array.isArray(d.shops)?[...new Set(d.shops.filter(x=>typeof x==='string'&&x.trim()).map(x=>x.slice(0,60)))]:[];
-  const slotOk=x=>x&&typeof x.k==='string'&&(x.m==='midi'||x.m==='soir');
+  const slotOk=x=>x&&typeof x.k==='string'&&MOMI(x.m)>=0;
   s.restes=s.restes.filter(x=>typeof x.rid==='string'&&slotOk(x.from)&&slotOk(x.to)).map(x=>({id:x.id,rid:x.rid,from:{k:x.from.k,m:x.from.m},to:{k:x.to.k,m:x.to.m},members:Array.isArray(x.members)?x.members.filter(i=>typeof i==='string'):[]}));
   const ids=v=>Array.isArray(v)?v.filter(x=>typeof x==='string'):[];
   s.members=s.members.map(m=>({id:m.id,name:String(m.name||''),kind:m.kind==='enfant'?'enfant':'adulte'}));
@@ -547,7 +547,7 @@ const slotList=(k,m)=>idsAt(S.planning[k]?.[m]);
 const newEntry=rid=>{const r=R(rid);return {id:uid(),r:rid,slots:cleanSlots(r.slots),cond:(r.cond||[]).filter(i=>A(i)),members:[...(r.members||[])].filter(M)}};
 function assign(k,m,list){const day={...(S.planning[k]||{})},seen=new Set();const l=(list||[]).map(x=>typeof x==='string'?(R(x)?newEntry(x):null):normEntry(x)).filter(e=>e&&!seen.has(e.id)&&seen.add(e.id)).map(e=>({id:e.id,r:e.r,slots:e.slots,cond:e.cond,members:entryMembers(e)}));if(l.length)day[m]=l;else delete day[m];if(Object.keys(day).length)S.planning[k]=day;else delete S.planning[k]}
 const slotRows=(slots,key)=>SLOTS.map(([s,l])=>{const o=refObj(slots[s]);return `<div class="slotrow"><button type="button" class="slotbtn" data-eslot="${esc(key)}|${s}"><span class="sl">${l}</span>${o?(slots[s].k==='a'?emoHtml(o):'<span class="pl">Plat</span>')+`<span>${esc(o.name)}</span>`:'<span class="muted">Choisir…</span>'}</button>${o?`<button type="button" class="x" data-eclear="${esc(key)}|${s}" aria-label="Retirer ${l}">×</button>`:''}</div>`}).join('');
-function planPick(k,m){const label=`${m==='midi'?'Midi':'Soir'}, ${fromKey(k).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}`;let draft=null,mf=m;
+function planPick(k,m){const label=`${MOML(m)}, ${fromKey(k).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}`;let draft=null,mf=m==='matin'&&!S.repas.some(r=>r.moment==='matin')?'':m;
   openSheet(`<h2>${esc(label)}</h2><p class="muted" style="margin:0">Compose le repas case par case, ou pars d’un repas enregistré et change ce que tu veux (ex. le brassé).</p><div id="prs"></div><div id="pdraft"></div>
   <h3 style="margin-top:14px">Ajouter un repas</h3><button type="button" class="ghost" id="pc" style="width:100%">+ Composer case par case</button>
   ${S.repas.length?`<div class="seg" id="pmf" style="margin-top:10px"></div><input type="search" id="pq" placeholder="Partir d’un repas enregistré…" autocomplete="off" aria-label="Chercher un repas" style="margin-top:10px"><ul class="list" id="pl" style="margin-top:10px"></ul>`:''}
@@ -565,7 +565,7 @@ function planPick(k,m){const label=`${m==='midi'?'Midi':'Soir'}, ${fromKey(k).to
       const inn=restesTo(k,m).map(x=>`<span class="chip">Reste de « ${esc(resteName(x))} » (${esc(slotLabel(x.from.k,x.from.m))})${forTxt(x.members)?' · '+esc(forTxt(x.members)):''} <button type="button" class="chipx" data-rdel="${esc(x.id)}" aria-label="Retirer ce reste">×</button></span>`).join('');
       root.querySelector('#prs').innerHTML=(out?`<h3 style="margin-top:14px">Dans ce créneau</h3>${out}`:'')+(inn?`<h3>Restes mangés ici</h3><div class="resterow">${inn}</div>`:'');
       root.querySelector('#pdraft').innerHTML=draft?`<h3 style="margin-top:14px">Nouveau repas</h3><div class="entry"><p class="muted" style="margin:0 0 8px">Choisis au moins une case.</p>${slotRows(draft.slots,'draft')}<div class="resterow"><button type="button" class="ghost" id="pdx">Annuler</button></div></div>`:'';
-      if(!pq)return;const q=norm(pq.value),cur=ents.map(e=>e.r);root.querySelector('#pmf').innerHTML=[['midi','Midi'],['soir','Soir']].map(([k2,l])=>`<button type="button" class="tog" data-pmf="${k2}" aria-pressed="${mf===k2}">${l}</button>`).join('');
+      if(!pq)return;const q=norm(pq.value),cur=ents.map(e=>e.r);root.querySelector('#pmf').innerHTML=MOMENTS.map(([k2,l])=>`<button type="button" class="tog" data-pmf="${k2}" aria-pressed="${mf===k2}">${l}</button>`).join('');
       const arr=byName(S.repas).filter(r=>(!q||norm(r.name+' '+summary(r)).includes(q))&&(!mf||!r.moment||r.moment===mf||r.moment==='both')).sort((a,b)=>cur.includes(b.id)-cur.includes(a.id)||((b.moment===m||b.moment==='both')-(a.moment===m||a.moment==='both')));
       root.querySelector('#pl').innerHTML=arr.map(r=>`<li><button type="button" class="row" data-pick="${esc(r.id)}" aria-pressed="${cur.includes(r.id)}"><span class="rmain"><strong>${cur.includes(r.id)?'✓ ':''}${esc(r.name)}${momHtml(r)}</strong><span class="desc">${esc(summary(r))}</span></span></button></li>`).join('')||'<p class="muted">Aucun repas ne correspond.</p>'};
     draw();if(pq)pq.oninput=draw;
@@ -592,14 +592,14 @@ function planPick(k,m){const label=`${m==='midi'?'Midi':'Soir'}, ${fromKey(k).to
 
 
 /* ---------- restes ---------- */
-const slotLabel=(k,m)=>fromKey(k).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'short'})+', '+(m==='midi'?'midi':'soir');
+const slotLabel=(k,m)=>fromKey(k).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'short'})+', '+MOML(m).toLowerCase();
 const resteEntry=x=>slotEntries(x.from.k,x.from.m).find(e=>e.id===x.rid);
 const resteOk=x=>!!resteEntry(x);
 const resteName=x=>{const e=resteEntry(x);return e?entryName(e):''};
 const restesFrom=(k,m,rid)=>S.restes.filter(x=>x.from.k===k&&x.from.m===m&&x.rid===rid&&resteOk(x));
 const restesTo=(k,m)=>S.restes.filter(x=>x.to.k===k&&x.to.m===m&&resteOk(x));
 function resteSheet(k,m,rid,redraw){const en=slotEntries(k,m).find(e=>e.id===rid);if(!en)return;const r={name:entryName(en)};const mem=new Set(S.members.filter(x=>x.kind==='enfant').map(x=>x.id));
-  const opts=[];const d0=fromKey(k);for(let i=0;i<8;i++){const d=new Date(d0);d.setDate(d0.getDate()+i);const kk=keyOf(d);for(const [mm] of MOMENTS){if(i===0&&(mm==='midi'||m==='soir'))continue;opts.push([kk,mm])}}
+  const opts=[];const d0=fromKey(k);for(let i=0;i<8;i++){const d=new Date(d0);d.setDate(d0.getDate()+i);const kk=keyOf(d);for(const [mm] of MOMENTS){if(i===0&&MOMI(mm)<=MOMI(m))continue;opts.push([kk,mm])}}
   openSheet(`<h2>Reste de « ${esc(r.name)} »</h2><p class="muted" style="margin:0">Préparé ${esc(slotLabel(k,m))}. Le reste compte dans les quantités de ce repas, pas en plus.</p>
   <label>Mangé quand<select id="rt">${opts.map(([kk,mm])=>`<option value="${kk}|${mm}">${esc(slotLabel(kk,mm))}</option>`).join('')}</select></label>
   <fieldset><legend>Pour qui</legend><div id="rm"></div></fieldset>
@@ -810,13 +810,13 @@ function slotItems(rs,lo){const groups=new Map();const g=t=>{if(!groups.has(t))g
 const ui={mem:'',who:'',q:{},tf:'',al:'',cat:'',ori:'',mom:'',fav:false,week:0};
 const search=(ph)=>`<input type="search" id="q" placeholder="${ph}" value="${esc(ui.q[route]||'')}" autocomplete="off" aria-label="${ph}">`;
 const V={
-planning:{title:'Planning',sub:()=>'Midi et soir, semaine par semaine',shell:()=>'<div id="list"></div>',list:()=>{
+planning:{title:'Planning',sub:()=>'Matin, midi et soir, semaine par semaine',shell:()=>'<div id="list"></div>',list:()=>{
   const now=new Date();now.setHours(0,0,0,0);const ws=new Date(now);ws.setDate(now.getDate()-((now.getDay()+6)%7)+ui.week*7);
   const days=[...Array(7)].map((_,i)=>{const d=new Date(ws);d.setDate(ws.getDate()+i);return d});const tk=keyOf(now);
   const f=d=>d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
   return `<div class="weeknav"><button type="button" data-week="-1" aria-label="Semaine précédente">‹</button><div><strong>Du ${f(days[0])} au ${f(days[6])}</strong>${ui.week?'<button type="button" class="link" data-week="0">Revenir à cette semaine</button>':'<span class="muted">Cette semaine</span>'}</div><button type="button" data-week="1" aria-label="Semaine suivante">›</button></div><div class="weektools"><button type="button" class="primary" data-courses>Liste de courses</button><button type="button" class="ghost" data-wsheet>Modèles et copier / coller</button><button type="button" class="ghost" data-wclear>Vider la semaine</button>${clip?`<button type="button" class="ghost" data-wpaste style="position:relative;padding-right:40px">Coller : ${esc(clipTxt(clip))}, à partir de lundi<span class="clipx" data-wclip role="button" aria-label="Oublier ce qui a été copié" title="Oublier la copie">×</span></button>`:''}</div>${S.members.length>1?`<div class="filters" style="margin:0 0 10px">${S.members.map(x=>`<button type="button" class="fchip" data-pmemf="${esc(x.id)}" aria-pressed="${ui.pmem===x.id}" style="--c:${memCol(x.name)}">${esc(x.name)}</button>`).join('')}</div>`:''}`+
   days.map(d=>{const k=keyOf(d);return `<section class="day${k===tk?' today':''}"><h3>${d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}${k===tk?' <span class="muted">· aujourd’hui</span>':''}<button type="button" class="dayact" data-dayact="${k}" aria-label="Copier, coller ou enregistrer ce jour">⋯</button></h3>${MOMENTS.map(([m,ml])=>{const pf=x=>!ui.pmem||!M(ui.pmem)||!x.length||x.includes(ui.pmem);const rs=slotEntries(k,m).filter(e=>pf(entryMembers(e))),lo=restesTo(k,m).filter(x=>pf(x.members.filter(M)));
-    return `<button type="button" class="meal" data-day="${k}" data-moment="${m}"><span class="mlabel">${ml}</span>${rs.length||lo.length?`<span class="mlist">${slotItems(rs,lo)}</span>`:'<span class="mbody muted">+ Choisir un repas</span>'}</button>`}).join('')}</section>`}).join('')}},
+    return `<button type="button" class="meal${m==='matin'?' matin':''}" data-day="${k}" data-moment="${m}"><span class="mlabel">${ml}</span>${rs.length||lo.length?`<span class="mlist">${slotItems(rs,lo)}</span>`:`<span class="mbody muted">${m==='matin'?'+':'+ Choisir un repas'}</span>`}</button>`}).join('')}</section>`}).join('')}},
 rapport:{title:'Rapport',sub:()=>'Ce qu’on mange, semaine par semaine',shell:()=>'<div id="list"></div>',list:()=>{
   const days=weekDays(ui.week),f=d=>d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'}),R0=report(days,ui.rpm&&M(ui.rpm)?ui.rpm:'');
   const nav=`<div class="weeknav"><button type="button" data-week="-1" aria-label="Semaine précédente">‹</button><div><strong>Du ${f(days[0])} au ${f(days[6])}</strong>${ui.week?'<button type="button" class="link" data-week="0">Revenir à cette semaine</button>':'<span class="muted">Cette semaine</span>'}</div><button type="button" data-week="1" aria-label="Semaine suivante">›</button></div>${S.members.length>1?`<div class="filters" style="margin:0 0 10px">${S.members.map(x=>`<button type="button" class="fchip" data-rpm="${esc(x.id)}" aria-pressed="${ui.rpm===x.id}" style="--c:${memCol(x.name)}">${esc(x.name)}</button>`).join('')}</div>`:''}`;
@@ -842,7 +842,7 @@ repas:{title:'Repas complets',sub:()=>`${S.repas.length} repas enregistrés · �
   const old=q?[]:S.repas.filter(r=>{const u=us.get(r.id);return u&&u.last&&!u.next&&daysBetween(u.last,tk)>=21}).sort((a,b)=>us.get(a.id).last.localeCompare(us.get(b.id).last)).slice(0,4);
   return (old.length?`<section class="group"><h2>Pas fait depuis longtemps <span class="muted">${old.length}</span></h2><ul class="list">${old.map(card).join('')}</ul></section><h2>Tous les repas</h2>`:'')+(arr.length?`<ul class="list">${arr.map(card).join('')}</ul>`:'<p class="muted">Aucun repas ne correspond.</p>')}},
 plats:{title:'Plats',sub:()=>`${S.plats.length} plats · ${S.plats.filter(p=>p.fav).length} favoris`,shell:()=>{const used=allCats().filter(c=>S.plats.some(p=>p.cat===c.id));
-  return `<div class="tools">${search('Chercher un plat')}<div class="filters"><button type="button" class="fchip" data-favf aria-pressed="${ui.fav}" style="--c:var(--star)">★ Favoris</button>${ORIG.map(([k,l])=>`<button type="button" class="fchip" data-orif="${k}" aria-pressed="${ui.ori===k}">${l}</button>`).join('')}${S.members.map(m=>`<button type="button" class="fchip" data-memf="${esc(m.id)}" aria-pressed="${ui.mem===m.id}">${esc(m.name)}</button>`).join('')}${[['midi','Midi'],['soir','Soir']].map(([k,l])=>`<button type="button" class="fchip" data-momf="${k}" aria-pressed="${ui.mom===k}">${l}</button>`).join('')}${used.map(c=>`<button type="button" class="fchip" data-catf="${esc(c.id)}" aria-pressed="${ui.cat===c.id}">${esc(c.label)}</button>`).join('')}</div>
+  return `<div class="tools">${search('Chercher un plat')}<div class="filters"><button type="button" class="fchip" data-favf aria-pressed="${ui.fav}" style="--c:var(--star)">★ Favoris</button>${ORIG.map(([k,l])=>`<button type="button" class="fchip" data-orif="${k}" aria-pressed="${ui.ori===k}">${l}</button>`).join('')}${S.members.map(m=>`<button type="button" class="fchip" data-memf="${esc(m.id)}" aria-pressed="${ui.mem===m.id}">${esc(m.name)}</button>`).join('')}${MOMENTS.map(([k,l])=>`<button type="button" class="fchip" data-momf="${k}" aria-pressed="${ui.mom===k}">${l}</button>`).join('')}${used.map(c=>`<button type="button" class="fchip" data-catf="${esc(c.id)}" aria-pressed="${ui.cat===c.id}">${esc(c.label)}</button>`).join('')}</div>
   <select id="alf" aria-label="Filtrer par aliment"><option value="">Tous les aliments</option>${TYPES.map(([t,l])=>{const arr=byName(S.aliments.filter(a=>a.type===t));return arr.length?`<optgroup label="${pl(l)}">${arr.map(a=>`<option value="${esc(a.id)}"${ui.al===a.id?' selected':''}>${esc(a.name)}</option>`).join('')}</optgroup>`:''}).join('')}</select></div><div id="list"></div>`},list:()=>{
   if(!S.plats.length)return `<div class="empty"><p>Pas encore de plat. Ajoute par exemple « Poulet rôti » avec ses aliments, ou commence avec des exemples.</p><button type="button" class="primary" data-add>Ajouter un plat</button> <button type="button" class="ghost" data-starter>Ajouter mes listes</button></div>`;
   const q=norm(ui.q.plats),al=A(ui.al);
