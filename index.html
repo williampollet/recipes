@@ -1088,7 +1088,7 @@ if(migrate())persist();
 render();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 // nouvelle version en ligne : recharge tout seul au retour dans l'app (si aucune fiche n'est ouverte et tout est envoyé)
-const BUILD='repas-v65';
+const BUILD='repas-v66';
 async function checkUpdate(){if(location.protocol!=='https:')return;try{const t=await (await fetch('sw.js?'+Date.now(),{cache:'no-store'})).text();const v=(t.match(/const C='([^']+)'/)||[])[1];
   if(!v||v===BUILD)return;if(document.body.classList.contains('lock')||(typeof dirty!=='undefined'&&dirty)){setTimeout(checkUpdate,60000);return}location.reload()}catch(_){}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkUpdate()});setInterval(checkUpdate,30*60000);
