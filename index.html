@@ -148,6 +148,187 @@ nav svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;st
 <div id="layer2" class="layer" hidden><div class="backdrop" data-close></div><div class="sheet" id="sheet2" role="dialog" aria-modal="true"></div></div>
 <div id="toast" role="status" hidden></div>
 <script>
+/* ---------- langue (FR / EN) ----------
+   L'interface est écrite en français. En anglais, chaque texte affiché passe par EN (correspondance exacte)
+   puis par EN_RX (textes avec des nombres, des dates ou des noms). Les noms d'aliments, de plats et de repas
+   ne sont pas traduits : ce sont tes données. */
+const LANG=(()=>{try{const v=localStorage.getItem('kp.lang');if(v==='fr'||v==='en')return v}catch(_){}return 'fr'})();
+const LOC=LANG==='en'?'en-GB':'fr-FR';
+const EN={
+// navigation, en-têtes
+'Planning':'Planner','Repas':'Meals','Plats':'Dishes','Rapport':'Report','Aliments':'Ingredients','Pages':'Pages',
+'Matin, midi et soir, semaine par semaine':'Breakfast, lunch and dinner, week by week',
+'Ce qu’on mange, semaine par semaine':'What we eat, week by week',
+'Repas complets':'Full meals','Données et compte':'Data and account',
+// moments, créneaux, types
+'Matin':'Breakfast','Midi':'Lunch','Soir':'Dinner','Midi et soir':'Lunch and dinner','☕ Matins':'☕ Breakfasts',
+'matin':'breakfast','midi':'lunch','soir':'dinner',
+'Entrée':'Starter','Plat':'Main','Protéine':'Protein','Laitage':'Dairy','Dessert':'Dessert','Condiments':'Condiments',
+'Légume':'Vegetable','Féculent':'Starch','Fruit':'Fruit','Légumineuse':'Pulse','Épices':'Spices','Sucré':'Sweet',
+'Légumes':'Vegetables','Féculents':'Starches','Fruits':'Fruit','Laitages':'Dairy','Protéines':'Proteins','Légumineuses':'Pulses','Sucrés':'Sweets',
+'Maison':'Homemade','Tout fait':'Ready-made','Commun':'Shared','Enfant':'Child','Adulte':'Adult','enfant':'child','adulte':'adult',
+'Soupe':'Soup','Gratin':'Gratin','Vapeur':'Steamed','Poêlé':'Pan-fried','Au four':'Baked','Salade':'Salad','Purée':'Mash','Mijoté':'Stew','Plancha':'Griddle',
+'pièce':'piece','pièces':'pieces','tranche':'slice','c. à s.':'tbsp',
+'Supermarché':'Supermarket','Marché':'Market','Fromagerie':'Cheese shop','Boulangerie':'Bakery','Boucherie':'Butcher','Sans magasin':'No shop',
+'Lun':'Mon','Mar':'Tue','Mer':'Wed','Jeu':'Thu','Ven':'Fri','Sam':'Sat','Dim':'Sun',
+// commun
+'Ajouter':'Add','+ Ajouter':'+ Add','Annuler':'Undo','Fermer':'Close','Terminé':'Done','Enregistrer':'Save','Modifier':'Edit','Supprimer':'Delete',
+'Confirmer la suppression':'Confirm deletion','Retirer':'Remove','Chercher':'Search','Choisir…':'Choose…','Aucun':'None','Tous':'All',
+'Nom':'Name','Emoji':'Emoji','Type':'Type','Magasin':'Shop','Stock':'Stock','Description':'Description','Catégorie':'Category','(optionnel)':'(optional)','(facultatif)':'(optional)',
+'Moment':'Meal time','Pour qui':'For whom','Plutôt pour':'Best for','Existe déjà':'Already exists','Autre magasin':'Other shop','Nouveau magasin':'New shop',
+'Quantité':'Quantity','Unité':'Unit','sans quantité':'no quantity','Copié ✓':'Copied ✓','Copiée ✓':'Copied ✓','Copie impossible':'Copy failed',
+'aujourd’hui':'today','hier':'yesterday','toujours':'always',
+// compte, famille, données
+'Famille et données':'Family and data','Famille':'Family','Compte':'Account','Exporter':'Export','Importer':'Import','Langue':'Language',
+'Copie toutes tes données pour les sauvegarder ou les mettre dans l’autre version de l’app.':'Copies all your data to back it up or move it to the other version of the app.',
+'Copier les données':'Copy data','Colle des données copiées depuis l’app. Elles remplacent les données actuelles (tu pourras annuler).':'Paste data copied from the app. It replaces the current data (you can undo).',
+'Coller ici':'Paste here','Données à importer':'Data to import','Ce texte n’est pas reconnu.':'This text isn’t recognised.','Aucune donnée trouvée dans ce texte.':'No data found in this text.',
+'Texte sélectionné ci-dessous : copie-le':'Text selected below: copy it','Prénom':'First name','Adulte ou enfant':'Adult or child','Personne pour l’instant.':'Nobody yet.','Membre retiré':'Member removed',
+'Déclare ta famille avec le menu ⋯ en haut à droite pour choisir qui mange quoi.':'Add your family with the ⋯ menu at the top right to choose who eats what.',
+'Personne de coché = toute la famille.':'Nobody ticked = the whole family.','Personne de coché = toute la famille':'Nobody ticked = the whole family',
+'Se déconnecter':'Sign out','Se connecter':'Sign in','Connexion':'Sign in','E-mail':'Email','Mot de passe':'Password','Créer mon compte':'Create my account',
+'Un compte par personne du foyer. Vous voyez et modifiez les mêmes données.':'One account per person in the household. You all see and edit the same data.',
+'E-mail et mot de passe de 6 caractères minimum.':'Email and a password of at least 6 characters.','Un instant…':'One moment…','E-mail ou mot de passe incorrect.':'Wrong email or password.',
+'Compte créé. Clique sur le lien reçu par e-mail, puis reviens te connecter ici.':'Account created. Click the link in the email, then come back here to sign in.',
+'Ce compte n’a pas accès aux données du foyer.':'This account has no access to the household data.',
+'Hors ligne : modifications gardées sur ce téléphone, envoi dès que possible.':'Offline: changes kept on this phone, sent as soon as possible.',
+'Cloud injoignable : données de ce téléphone affichées.':'Cloud unreachable: showing this phone’s data.','Synchronisation…':'Syncing…',
+'Cloud non configuré : données gardées sur ce téléphone.':'Cloud not set up: data kept on this phone.','Aliments et plats mis à jour':'Ingredients and dishes updated',
+'Tes listes ont été ajoutées':'Your lists have been added',
+// planning
+'Cette semaine':'This week','Revenir à cette semaine':'Back to this week','Semaine précédente':'Previous week','Semaine suivante':'Next week',
+'Liste de courses':'Shopping list','Modèles et copier / coller':'Templates and copy / paste','Vider la semaine':'Clear the week','Confirmer : tout vider ?':'Confirm: clear everything?','Semaine vidée':'Week cleared',
+'+ Choisir un repas':'+ Choose a meal','Copier, coller ou enregistrer ce jour':'Copy, paste or save this day','Oublier ce qui a été copié':'Forget what was copied','Oublier la copie':'Forget the copy','Copie oubliée':'Copy forgotten',
+'Reste':'Leftover','Reste prévu':'Leftover planned','Retirer ce reste':'Remove this leftover','Prévoir le reste':'Plan the leftover','+ Prévoir un reste':'+ Plan a leftover','Mangé quand':'Eaten when','Préparé':'Made',
+'Compose le repas case par case, ou pars d’un repas enregistré et change ce que tu veux (ex. le brassé).':'Build the meal slot by slot, or start from a saved meal and change what you like (e.g. the yoghurt).',
+'Dans ce créneau':'In this slot','Restes mangés ici':'Leftovers eaten here','Ajouter un repas':'Add a meal','+ Composer case par case':'+ Build slot by slot','Tout retirer':'Remove all','+ Nouveau modèle':'+ New template',
+'Partir d’un repas enregistré…':'Start from a saved meal…','Chercher un repas':'Search meals','Retirer ce repas':'Remove this meal','Enregistrer comme repas':'Save as a meal',
+'Retire le repas avec × en haut de sa carte':'Remove the meal with × at the top of its card','Repas retiré du créneau':'Meal removed from the slot','Repas retirés du planning':'Meals removed from the planner',
+'Choisis au moins une case.':'Choose at least one slot.','Aucun repas ne correspond.':'No meal matches.','Nom du repas':'Meal name',
+'Condiments et épices':'Condiments and spices','Sans quantité, autant que tu veux. Ils ne s’additionnent pas dans les courses.':'No quantity, as much as you like. They don’t add up in the shopping list.',
+'Aucun condiment. Ajoute-en dans Aliments.':'No condiments. Add some in Ingredients.',
+'Copier / coller':'Copy / paste','Copier cette semaine':'Copy this week','Coller':'Paste','Enregistrer comme modèle':'Save as template','Appliquer un modèle à partir de lundi':'Apply a template from Monday',
+'Aucun modèle pour l’instant.':'No templates yet.','Nom du modèle':'Template name','Donne un nom au modèle.':'Give the template a name.','Modèle supprimé':'Template deleted','Modèle mis à jour':'Template updated','Modèle enregistré':'Template saved',
+'Semaine copiée : va sur une autre semaine et colle-la':'Week copied: go to another week and paste it',
+'Copier, vider ou enregistrer':'Copy, clear or save','Quels jours ?':'Which days?','Copier ces jours':'Copy these days','Vider ces jours':'Clear these days','Remplir à partir de ce jour':'Fill from this day',
+'Appliquer un modèle :':'Apply a template:','Coller ici :':'Paste here:','Rien de prévu sur ces jours.':'Nothing planned on these days.','Collé':'Pasted','Jour vidé':'Day cleared','Rien à enregistrer sur ces jours.':'Nothing to save on these days.',
+// courses
+'Par magasin':'By shop','Par type':'By type','En stock':'In stock','en stock':'in stock','épuisé':'out','Plus en stock':'Out of stock','En plus':'Extras','Tout décocher':'Untick all','Copier la liste':'Copy the list',
+'Pas dans la liste. Touche « Plus en stock » si tu en manques.':'Not on the list. Tap “Out of stock” if you run out.','Article en plus':'Extra item','annuler l’ajustement':'undo the adjustment','déjà là':'already there',
+'Plats tout faits':'Ready-made dishes','Aucun repas prévu cette semaine. Remplis le planning, la liste se fera toute seule.':'No meals planned this week. Fill in the planner and the list builds itself.',
+'En stock 7 jours':'In stock for 7 days','Épuisé':'Out','Pas en stock':'Not in stock',
+// rapport
+'Portions par personne (moyenne)':'Servings per person (average)','une portion = un aliment servi à une personne dans un repas.':'one serving = one ingredient served to one person in a meal.',
+'🥦🍎 Fruits et légumes':'🥦🍎 Fruit and vegetables','🥛 Laitages':'🥛 Dairy','portions par jour':'servings per day','par jour':'per day','Variété':'Variety','aliments différents':'different ingredients',
+'Maison ou tout fait':'Homemade or ready-made','maison':'homemade',
+'Rien de prévu cette semaine. Remplis le planning, le rapport se fera tout seul.':'Nothing planned this week. Fill in the planner and the report builds itself.',
+'Rien de prévu cette semaine pour cette personne. Remplis le planning, le rapport se fera tout seul.':'Nothing planned this week for this person. Fill in the planner and the report builds itself.',
+// repas
+'Les plus utilisés':'Most used','A → Z':'A → Z','Jamais mis au planning':'Never planned','Pas fait depuis longtemps':'Not made for a while','Tous les repas':'All meals',
+'Compose ton premier repas complet en piochant dans tes aliments et tes plats.':'Build your first full meal from your ingredients and dishes.','Créer un repas':'Create a meal',
+'Modifier le repas':'Edit meal','Nouveau repas':'New meal','Chaque case peut être un aliment ou un plat.':'Each slot can be an ingredient or a dish.',
+'Pour qui par défaut':'Default for','(pré-coché dans le planning, modifiable chaque jour)':'(pre-ticked in the planner, can be changed each day)','Nom automatique':'Automatic name',
+'Commun (toute la famille)':'Shared (whole family)','Juste pour l’enfant':'Just for the child','Choisis au moins un élément.':'Choose at least one item.','Repas modifié':'Meal updated','Repas créé':'Meal created','Repas supprimé':'Meal deleted',
+'Chercher un aliment ou un plat':'Search ingredients or dishes','Aliments conseillés':'Suggested ingredients','Autres aliments':'Other ingredients',
+'Rien ne correspond. Ajoute d’abord des aliments ou des plats.':'Nothing matches. Add ingredients or dishes first.',
+// plats
+'★ Favoris':'★ Favourites','Tous les aliments':'All ingredients','Chercher un plat':'Search dishes','Filtrer par aliment':'Filter by ingredient','Retirer des favoris':'Remove from favourites','Mettre en favori':'Add to favourites',
+'Ajouté aux favoris':'Added to favourites','Retiré des favoris':'Removed from favourites','Aucun plat ne correspond.':'No dish matches.','Ajouter un plat':'Add a dish','Ajouter mes listes':'Add my lists',
+'Pas encore de plat. Ajoute par exemple « Poulet rôti » avec ses aliments, ou commence avec des exemples.':'No dishes yet. Add for example “Roast chicken” with its ingredients, or start with examples.',
+'Modifier le plat':'Edit dish','Nouveau plat':'New dish','Quantités par adulte':'Quantities per adult','(un enfant compte pour une demi-portion)':'(a child counts as half a serving)','Type de plat':'Dish type',
+'★ Plat favori':'★ Favourite dish','Choisir les aliments':'Choose ingredients','Choisis les aliments en bas de la fiche.':'Choose the ingredients at the bottom of the sheet.',
+'Donne un nom au plat.':'Give the dish a name.','Un plat porte déjà ce nom.':'A dish already has this name.','Plat modifié':'Dish updated','Plat ajouté':'Dish added','Plat supprimé':'Dish deleted',
+'Chercher ou créer un aliment':'Search or create an ingredient','Chercher un aliment':'Search ingredients','Tape un nom pour créer ton premier aliment.':'Type a name to create your first ingredient.',
+'Autre type (ex. Wok)':'Other type (e.g. Wok)','Nouveau type de plat':'New dish type','Comment tu le prépares, avec quoi…':'How you make it, with what…','ex. Poulet rôti':'e.g. Roast chicken','Idées de plats':'Dish ideas',
+'Aucun plat pour l’instant.':'No dishes yet.',
+// aliments
+'Nouvel aliment':'New ingredient','ex. Courgette':'e.g. Courgette','Emoji (laisser vide pour le choix automatique)':'Emoji (leave empty for automatic)',
+'Portion par adulte':'Serving per adult','(quand il est servi seul dans un repas)':'(when served on its own in a meal)','Poids d’une pièce, en g':'Weight of one piece, in g','(pour le rapport : pot, gourde, Babybel…)':'(for the report: pot, pouch, Babybel…)',
+'Donne un nom à l’aliment.':'Give the ingredient a name.','Cet aliment existe déjà.':'This ingredient already exists.','Aliment modifié':'Ingredient updated','Aliment ajouté':'Ingredient added','Aliment supprimé':'Ingredient deleted',
+'Aucun aliment ne correspond.':'No ingredient matches.','ex. 100':'e.g. 100','ex. Papier toilette':'e.g. Toilet paper','ex. Semaine classique':'e.g. Usual week','Nom du modèle, ex. Gratin + reste':'Template name, e.g. Gratin + leftover',
+'Ta liste d’aliments est vide. Ajoute les tiens avec le bouton +, ou ajoute d’un coup tes listes papier : 48 aliments et 32 plats, que tu pourras modifier.':'Your ingredient list is empty. Add yours with the + button, or add the paper lists in one go: 48 ingredients and 32 dishes, which you can edit.',
+};
+const Tn=(n,one,many)=>`${n} ${Math.abs(parseFloat(String(n).replace(',','.')))<=1?one:many}`;
+const EN_RX=[
+[/^Du (.+) au (.+)$/,(m,a,b)=>`${a} – ${b}`],
+[/^([^]*\d[^]*) au ([^]*\d[^]*)$/,(m,a,b)=>`${a} – ${b}`],
+[/^Courses du (.+) au (.+)$/,(m,a,b)=>`Shopping ${a} – ${b}`],
+[/^(Matin|Midi|Soir), (.+)$/,(m,a,b)=>`${EN[a]}, ${b}`],
+[/^(.+), (matin|midi|soir)$/,(m,a,b)=>`${a}, ${EN[b]}`],
+[/^Préparé (.+)\. Le reste compte dans les quantités de ce repas, pas en plus\.$/,(m,a)=>`Made ${tr(a)}. The leftover counts in this meal’s quantities, not on top.`],
+[/^préparé (.+)$/,(m,a)=>`made ${tr(a)}`],
+[/^Reste de « (.+) »$/,(m,a)=>`Leftover from “${a}”`],
+[/^Reste (.+)$/,(m,a)=>`Leftover ${tr(a)}`],
+[/^Semaine du (.+), d’après les repas prévus\. Quantités = quantité par adulte × portions \(enfant = ½\), restes compris\.$/,(m,a)=>`Week of ${tr(a)}, based on planned meals. Quantities = quantity per adult × servings (child = ½), leftovers included.`],
+[/^semaine du (.+)$/i,(m,a)=>`week of ${tr(a)}`],
+[/^(\d+(?:[.,]\d+)?) (pièces?)$/,(m,n)=>Tn(n,'piece','pieces')],
+[/^(\d+(?:[.,]\d+)?) (portions?)$/,(m,n)=>Tn(n,'serving','servings')],
+[/^prévu : (.+?) ?·?$/,(m,a)=>`planned: ${a} ·`],
+[/^En stock, jusqu’au (.+)$/,(m,a)=>`In stock until ${a}`],
+[/^jusqu’au (.+)$/,(m,a)=>`until ${a}`],
+[/^Moins de (.+)$/,(m,a)=>`Less ${a}`],
+[/^Plus de (.+)$/,(m,a)=>`More ${a}`],
+[/^(.+) remis en stock$/,(m,a)=>`${a} back in stock`],
+[/^(.+) en stock$/,(m,a)=>`${a} in stock`],
+[/^Pour la semaine affichée \((\d+) repas prévus?\)\. Pour un ou deux jours, touche ⋯ à côté du jour\.$/,(m,n)=>`For the week shown (${Tn(n,'planned meal','planned meals')}). For one or two days, tap ⋯ next to the day.`],
+[/^Coller : (.+), à partir de lundi$/,(m,a)=>`Paste: ${tr(a)}, from Monday`],
+[/^Coller : (.+)$/,(m,a)=>`Paste: ${tr(a)}`],
+[/^(\d+) repas copiés? \((.+)\)$/,(m,n,a)=>`${Tn(n,'meal','meals')} copied (${tr(a)})`],
+[/^(\d+) repas copiés?$/,(m,n)=>`${Tn(n,'meal','meals')} copied`],
+[/^(.+) : ouvre un autre jour et colle$/,(m,a)=>`${tr(a)}: open another day and paste`],
+[/^(.+) seulement$/,(m,a)=>`${a} only`],
+[/^(\d+) repas sur ces jours$/,(m,n)=>`${Tn(n,'meal','meals')} on these days`],
+[/^(\d+) jours vidés$/,(m,n)=>`${n} days cleared`],
+[/^Modèle « (.+) » appliqué$/,(m,a)=>`Template “${a}” applied`],
+[/^Repas « (.+) » enregistré$/,(m,a)=>`Meal “${a}” saved`],
+[/^Créer « (.+) » comme :$/,(m,a)=>`Create “${a}” as:`],
+[/^(\d+) repas enregistrés?$/,(m,n)=>`${Tn(n,'saved meal','saved meals')}`],
+[/^à placer puis ajuster dans le planning$/,()=>'place them, then adjust in the planner'],
+[/^(\d+) repas prévus?$/,(m,n)=>Tn(n,'planned meal','planned meals')],
+[/^Dernière fois : (.+)$/,(m,a)=>`Last time: ${tr(a)}`],
+[/^Prévu (.+)$/,(m,a)=>`Planned ${a}`],
+[/^il y a (\d+) jours?$/,(m,n)=>Tn(n,'day ago','days ago')],
+[/^il y a (\d+) semaines?$/,(m,n)=>Tn(n,'week ago','weeks ago')],
+[/^il y a (\d+) mois$/,(m,n)=>Tn(n,'month ago','months ago')],
+[/^(\d+) plats?$/,(m,n)=>Tn(n,'dish','dishes')],
+[/^(\d+) favoris?$/,(m,n)=>Tn(n,'favourite','favourites')],
+[/^(\d+) aliments?$/,(m,n)=>Tn(n,'ingredient','ingredients')],
+[/^(\d+) choisis?$/,(m,n)=>`${n} selected`],
+[/^Supprimer \(retiré de (\d+) plats?\)$/,(m,n)=>`Delete (removed from ${Tn(n,'dish','dishes')})`],
+[/^Plats avec (.+)$/,(m,a)=>`Dishes with ${a}`],
+[/^Idées avec (.+)$/,(m,a)=>`Ideas with ${a}`],
+[/^(.+) croisé avec chaque type de plat\. Touche une idée pour la créer\.$/,(m,a)=>`${a} combined with each dish type. Tap an idea to create it.`],
+[/^Utilisé dans (\d+) repas\.?$/,(m,n)=>`Used in ${Tn(n,'meal','meals')}.`],
+[/^Portions (.+)$/,(m,a)=>`Servings: ${a}`],
+[/^objectif (\d+)$/,(m,n)=>`target ${n}`],
+[/^Moyenne sur les (\d+) jours? remplis\.$/,(m,n)=>`Average over the ${Tn(n,'filled day','filled days')}.`],
+[/^Sans poids connu, pas comptés dans les grammes : (.+)\. Ajoute le poids d’une pièce dans leur fiche\.$/,(m,a)=>`No known weight, not counted in grams: ${a}. Add the weight of one piece on their sheet.`],
+[/^(\S+) plats maison, (\S+) tout faits\.$/,(m,a,b)=>`${a} homemade, ${b} ready-made.`],
+[/^Connecté : (.+)$/,(m,a)=>`Signed in: ${a}`],
+[/^Création impossible : (.+)$/,(m,a)=>`Couldn’t create the account: ${a}`],
+[/^Importé : (.+)$/,(m,a)=>`Imported: ${a}`],
+[/^Retirer (.+)$/,(m,a)=>`Remove ${tr(a)}`],
+[/^Supprimer le modèle (.+)$/,(m,a)=>`Delete template ${a}`],
+[/^(.+) \(valeur courante\)$/,(m,a)=>`${a} (usual value)`],
+];
+function tr(s){if(LANG!=='en'||!s)return s;const k=s.replace(/\s+/g,' ').trim();if(!k)return s;
+  const lead=s.match(/^\s*/)[0],trail=s.match(/\s*$/)[0];const r=tr1(k);return r===k?s:lead+r+trail}
+function tr1(k){if(EN[k]!=null)return EN[k];
+  if(k.includes(' · '))return k.split(' · ').map(tr1).join(' · ');
+  const p=k.match(/^([^A-Za-zÀ-ÿ0-9«(]+)(.+)$/u);if(p){const r=tr1(p[2]);if(r!==p[2])return p[1]+r}
+  for(const [re,f] of EN_RX){const m=k.match(re);if(m)return f(...m)}
+  return k}
+if(LANG==='en'){document.documentElement.lang='en';
+  const AT=['placeholder','aria-label','title'];
+  const fix=n=>{if(n.nodeType===3){const p=n.parentElement;if(p&&/^(SCRIPT|STYLE|TEXTAREA)$/.test(p.tagName))return;const v=tr(n.nodeValue);if(v!==n.nodeValue)n.nodeValue=v;return}
+    if(n.nodeType!==1)return;for(const a of AT)if(n.hasAttribute(a)){const v=tr(n.getAttribute(a));if(v!==n.getAttribute(a))n.setAttribute(a,v)}
+    if(/^(SCRIPT|STYLE|TEXTAREA)$/.test(n.tagName))return;for(const c of n.childNodes)fix(c)};
+  new MutationObserver(ms=>{for(const m of ms){if(m.type==='childList')m.addedNodes.forEach(fix);else if(m.type==='characterData')fix(m.target);else fix1(m.target,m.attributeName)}})
+    .observe(document.documentElement,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:AT});
+  var fix1=(el,a)=>{const o=el.getAttribute(a),v=tr(o);if(v!==o)el.setAttribute(a,v)};
+  document.addEventListener('DOMContentLoaded',()=>fix(document.body));if(document.body)fix(document.body)}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-lang]');if(!b)return;try{localStorage.setItem('kp.lang',b.dataset.lang)}catch(_){}location.reload()},true);
+
 {
 const TYPES=[['legume','Légume'],['feculent','Féculent'],['fruit','Fruit'],['laitage','Laitage'],['proteine','Protéine'],['legumineuse','Légumineuse'],['epice','Épices'],['condiment','Condiments'],['sucre','Sucré']];
 const pl=l=>/s$/.test(l)?l:l+'s';
@@ -167,7 +348,7 @@ const memCol=n=>{const i=S.members.findIndex(m=>m.name===n);return i<0?'':MCOL[i
 const tagHtml=t=>t?' '+String(t).split(', ').map(n=>{const c=memCol(n);return `<span class="who"${c?` style="background:${c}"`:''}>${esc(n)}</span>`}).join(''):'';
 const whoTag=r=>tagHtml(forTxt(r.members)||(!(r.members||[]).length&&r.who==='enfant'?'Enfant':''));
 const portions=list=>{const ms=(list||[]).map(M).filter(Boolean);const all=ms.length?ms:S.members;return all.length?all.reduce((n,m)=>n+(m.kind==='enfant'?.5:1),0):1};
-const fmtQ=(n,u)=>{if(u==='g'&&n>=1000)return (Math.round(n/100)/10).toLocaleString('fr-FR')+' kg';if(u==='ml'&&n>=1000)return (Math.round(n/100)/10).toLocaleString('fr-FR')+' l';const v=u==='g'||u==='ml'?Math.round(n):u==='pièce'?Math.ceil(n-1e-9):Math.ceil(n*2)/2;return v.toLocaleString('fr-FR')+' '+(u==='pièce'&&v>1?'pièces':u==='tranche'&&v>1?'tranches':u)};
+const fmtQ=(n,u)=>{if(u==='g'&&n>=1000)return (Math.round(n/100)/10).toLocaleString(LOC)+' kg';if(u==='ml'&&n>=1000)return (Math.round(n/100)/10).toLocaleString(LOC)+' l';const v=u==='g'||u==='ml'?Math.round(n):u==='pièce'?Math.ceil(n-1e-9):Math.ceil(n*2)/2;return v.toLocaleString(LOC)+' '+(u==='pièce'&&v>1?'pièces':u==='tranche'&&v>1?'tranches':u)};
 const qtyInput=(key,q)=>`<span class="qty"><input type="number" inputmode="decimal" min="0" step="any" data-qn="${esc(key)}" value="${q?q.n:''}" placeholder="—" aria-label="Quantité"><select data-qu="${esc(key)}" aria-label="Unité">${UNITS.map(u=>`<option${q&&q.u===u?' selected':''}>${u}</option>`).join('')}</select></span>`;
 const readQty=(root,key)=>{const n=root.querySelector(`[data-qn="${key}"]`),u=root.querySelector(`[data-qu="${key}"]`);return n&&u?qOk({n:parseFloat(String(n.value).replace(',','.')),u:u.value}):undefined};
 const allShops=()=>{const set=new Set([...SHOPS,...S.shops]);for(const x of [...S.aliments,...S.plats])if(x.shop)set.add(x.shop);return [...set]};
@@ -401,7 +582,7 @@ const PINCH=a=>a&&(a.type==='condiment'||a.type==='epice');
 const keyA=k=>k.startsWith('a:')?A(k.slice(2)):null;
 const inStock=k=>{const v=S.stock[k],a=keyA(k);if(a&&PINCH(a))return !(v&&v.out);return !!(v&&v.until&&v.until>=keyOf(new Date()))};
 function setStock(k,on){const a=keyA(k);if(a&&PINCH(a)){if(on)delete S.stock[k];else S.stock[k]={out:true}}else if(on){const d=new Date();d.setDate(d.getDate()+6);S.stock[k]={until:keyOf(d)}}else delete S.stock[k]}
-const stockTxt=k=>{const v=S.stock[k];return v&&v.until?'jusqu’au '+fromKey(v.until).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric'}):'toujours'};
+const stockTxt=k=>{const v=S.stock[k];return v&&v.until?'jusqu’au '+fromKey(v.until).toLocaleDateString(LOC,{weekday:'short',day:'numeric'}):'toujours'};
 const condChips=ids=>(ids||[]).map(A).filter(Boolean).map(a=>`<span class="chip t-${a.type}">${emoHtml(a)}${esc(a.name)}</span>`).join('');
 function condPicker(set,onChange){openSheet(`<h2>Condiments et épices</h2><p class="muted" style="margin:0">Sans quantité, autant que tu veux. Ils ne s’additionnent pas dans les courses.</p><div class="seg" id="cpl" style="margin-top:12px"></div><div class="actions"><button type="button" class="primary" data-close>Terminé</button></div>`,root=>{
   const draw=()=>{const arr=TYPES.filter(([t])=>t==='condiment'||t==='epice').flatMap(([t])=>byName(S.aliments.filter(a=>a.type===t)));root.querySelector('#cpl').innerHTML=arr.map(a=>`<button type="button" class="tog" data-cp="${esc(a.id)}" aria-pressed="${set.has(a.id)}">${emoHtml(a)}${esc(a.name)}</button>`).join('')||'<p class="muted">Aucun condiment. Ajoute-en dans Aliments.</p>'};draw();
@@ -557,7 +738,7 @@ const slotList=(k,m)=>idsAt(S.planning[k]?.[m]);
 const newEntry=rid=>{const r=R(rid);return {id:uid(),r:rid,slots:cleanSlots(r.slots),cond:(r.cond||[]).filter(i=>A(i)),members:[...(r.members||[])].filter(M)}};
 function assign(k,m,list){const day={...(S.planning[k]||{})},seen=new Set();const l=(list||[]).map(x=>typeof x==='string'?(R(x)?newEntry(x):null):normEntry(x)).filter(e=>e&&!seen.has(e.id)&&seen.add(e.id)).map(e=>({id:e.id,r:e.r,slots:e.slots,cond:e.cond,members:entryMembers(e)}));if(l.length)day[m]=l;else delete day[m];if(Object.keys(day).length)S.planning[k]=day;else delete S.planning[k]}
 const slotRows=(slots,key)=>SLOTS.map(([s,l])=>{const o=refObj(slots[s]);return `<div class="slotrow"><button type="button" class="slotbtn" data-eslot="${esc(key)}|${s}"><span class="sl">${l}</span>${o?(slots[s].k==='a'?emoHtml(o):'<span class="pl">Plat</span>')+`<span>${esc(o.name)}</span>`:'<span class="muted">Choisir…</span>'}</button>${o?`<button type="button" class="x" data-eclear="${esc(key)}|${s}" aria-label="Retirer ${l}">×</button>`:''}</div>`}).join('');
-function planPick(k,m){const label=`${MOML(m)}, ${fromKey(k).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}`;let draft=null,mf=m==='matin'&&!S.repas.some(r=>r.moment==='matin')?'':m;
+function planPick(k,m){const label=`${MOML(m)}, ${fromKey(k).toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long'})}`;let draft=null,mf=m==='matin'&&!S.repas.some(r=>r.moment==='matin')?'':m;
   openSheet(`<h2>${esc(label)}</h2><p class="muted" style="margin:0">Compose le repas case par case, ou pars d’un repas enregistré et change ce que tu veux (ex. le brassé).</p><div id="prs"></div><div id="pdraft"></div>
   <h3 style="margin-top:14px">Ajouter un repas</h3><button type="button" class="ghost" id="pc" style="width:100%">+ Composer case par case</button>
   ${S.repas.length?`<div class="seg" id="pmf" style="margin-top:10px"></div><input type="search" id="pq" placeholder="Partir d’un repas enregistré…" autocomplete="off" aria-label="Chercher un repas" style="margin-top:10px"><ul class="list" id="pl" style="margin-top:10px"></ul>`:''}
@@ -570,7 +751,7 @@ function planPick(k,m){const label=`${MOML(m)}, ${fromKey(k).toLocaleDateString(
         return `<div class="entry"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="flex:1">${mainSlot(e)?`<strong>${esc(entryName(e))}</strong>${entryRest(e)?`<br><span class="muted" style="font-size:14px">${esc(entryRest(e))}</span>`:''}`:`<span class="muted">${esc(entryRest(e))}</span>`}</span><button type="button" class="x" data-edel="${esc(e.id)}" aria-label="Retirer ce repas">×</button></div>
         ${slotRows(e.slots,e.id)}
         <div class="condrow"><span class="sl">Condiments</span>${condChips(e.cond)}<button type="button" class="ghost" data-econd="${esc(e.id)}">${(e.cond||[]).length?'Modifier':'+ Ajouter'}</button></div>
-        ${S.members.length?`<div class="seg" style="margin:8px 0">${S.members.map(x=>`<button type="button" class="tog" data-emem="${esc(e.id)}|${esc(x.id)}" aria-pressed="${em.has(x.id)}">${esc(x.name)}</button>`).join('')}</div><p class="muted" style="margin:0 0 8px;font-size:14px">${em.size?portions([...em]).toLocaleString('fr-FR')+' portion'+(portions([...em])>1?'s':''):'Personne de coché = toute la famille'}</p>`:''}
+        ${S.members.length?`<div class="seg" style="margin:8px 0">${S.members.map(x=>`<button type="button" class="tog" data-emem="${esc(e.id)}|${esc(x.id)}" aria-pressed="${em.has(x.id)}">${esc(x.name)}</button>`).join('')}</div><p class="muted" style="margin:0 0 8px;font-size:14px">${em.size?portions([...em]).toLocaleString(LOC)+' portion'+(portions([...em])>1?'s':''):'Personne de coché = toute la famille'}</p>`:''}
         <div class="resterow"><button type="button" class="ghost" data-reste="${esc(e.id)}">+ Prévoir un reste</button>${mod?`<button type="button" class="ghost" data-esave="${esc(e.id)}">Enregistrer comme repas</button>`:''}${restesFrom(k,m,e.id).map(x=>`<span class="chip">Reste ${esc(slotLabel(x.to.k,x.to.m))}${forTxt(x.members)?' · '+esc(forTxt(x.members)):''} <button type="button" class="chipx" data-rdel="${esc(x.id)}" aria-label="Retirer ce reste">×</button></span>`).join('')}</div></div>`}).join('');
       const inn=restesTo(k,m).map(x=>`<span class="chip">Reste de « ${esc(resteName(x))} » (${esc(slotLabel(x.from.k,x.from.m))})${forTxt(x.members)?' · '+esc(forTxt(x.members)):''} <button type="button" class="chipx" data-rdel="${esc(x.id)}" aria-label="Retirer ce reste">×</button></span>`).join('');
       root.querySelector('#prs').innerHTML=(out?`<h3 style="margin-top:14px">Dans ce créneau</h3>${out}`:'')+(inn?`<h3>Restes mangés ici</h3><div class="resterow">${inn}</div>`:'');
@@ -602,7 +783,7 @@ function planPick(k,m){const label=`${MOML(m)}, ${fromKey(k).toLocaleDateString(
 
 
 /* ---------- restes ---------- */
-const slotLabel=(k,m)=>fromKey(k).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'short'})+', '+MOML(m).toLowerCase();
+const slotLabel=(k,m)=>fromKey(k).toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'short'})+', '+MOML(m).toLowerCase();
 const resteEntry=x=>slotEntries(x.from.k,x.from.m).find(e=>e.id===x.rid);
 const resteOk=x=>!!resteEntry(x);
 const resteName=x=>{const e=resteEntry(x);return e?entryName(e):''};
@@ -647,10 +828,10 @@ const tplDesc=w=>w.days.map((d,i)=>{const x=MOMENTS.flatMap(([m])=>{const l=entr
 const tplList=(act)=>S.weeks.length?byName(S.weeks).map(w=>`<li class="rowwrap"><button type="button" class="row" data-${act}="${esc(w.id)}"><span class="rmain"><strong>${esc(w.name)} <span class="cat">${tplLen(w)}</span></strong><span class="desc">${esc(tplDesc(w))}</span></span></button><button type="button" class="starbtn" data-wdel="${esc(w.id)}" aria-label="Supprimer le modèle ${esc(w.name)}">×</button></li>`).join(''):'<p class="muted" style="margin:0">Aucun modèle pour l’instant.</p>';
 function delTpl(t,redraw){const w=S.weeks.find(x=>x.id===t.dataset.wdel);if(!w)return;if(t.dataset.armed){withUndo('Modèle supprimé',()=>{S.weeks=S.weeks.filter(x=>x.id!==w.id)});redraw()}else{t.dataset.armed='1';t.textContent='✓';t.setAttribute('aria-label','Confirmer la suppression')}}
 function saveTpl(name,tpl){const ex=S.weeks.find(w=>norm(w.name)===norm(name));const v={days:tpl.days,restes:tpl.restes};if(tpl.slots)v.slots=tpl.slots;if(ex){Object.assign(ex,v);if(!tpl.slots)delete ex.slots}else S.weeks.push({id:uid(),name,...v});persist();return ex}
-const shortD=k=>fromKey(k).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric'}).replace('.','');
+const shortD=k=>fromKey(k).toLocaleDateString(LOC,{weekday:'short',day:'numeric'}).replace('.','');
 const rangeTxt=(k,n)=>{const ks=daysFrom(k,n);return n===1?shortD(k)+' seulement':shortD(ks[0])+' → '+shortD(ks[n-1])};
 const clipTxt=c=>`${tplCount(c)} repas copié${tplCount(c)>1?'s':''} (${c.src||'copie'})`;
-function daySheet(k){const label=fromKey(k).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});let n=1;const full=tplCount(readDays(k,1))>0;
+function daySheet(k){const label=fromKey(k).toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long'});let n=1;const full=tplCount(readDays(k,1))>0;
   openSheet(`<h2>${esc(label)}</h2>
   <h3>Copier, vider ou enregistrer</h3><p class="muted" style="margin:0 0 8px;font-size:14px">Quels jours ?</p><div class="seg" id="dn"></div><p class="muted" id="dsum" style="margin:6px 0 0;font-size:14px"></p>
   <div class="seg" style="margin-top:10px"><button type="button" class="ghost" id="dc">Copier ces jours</button><button type="button" class="ghost" id="dx">Vider ces jours</button></div>
@@ -691,7 +872,7 @@ function weekSheet(){const cur=readWeek(ui.week),n=tplCount(cur);
 /* ---------- liste de courses ---------- */
 function coursesSheet(){const days=weekDays(ui.week),wk=keyOf(days[0]);const cs=S.courses[wk]||{checked:[],extra:[],adj:{}};cs.adj=cs.adj||{};
   const save=()=>{S.courses[wk]=cs;const old=keyOf(weekDays(ui.week-8)[0]);for(const k of Object.keys(S.courses))if(k<old)delete S.courses[k];persist()};
-  const f=d=>d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
+  const f=d=>d.toLocaleDateString(LOC,{day:'numeric',month:'short'});
   openSheet(`<h2>Liste de courses</h2><p class="muted" style="margin:0">Semaine du ${f(days[0])} au ${f(days[6])}, d’après les repas prévus. Quantités = quantité par adulte × portions (enfant = ½), restes compris.</p><div id="cl"></div>
   <h3>En plus</h3><div class="addtype"><input id="cx" placeholder="ex. Papier toilette" autocomplete="off" aria-label="Article en plus"><button type="button" class="ghost" id="cxb">Ajouter</button></div>
   <div class="actions"><button type="button" class="ghost" id="cr">Tout décocher</button><button type="button" class="ghost" data-close>Fermer</button><button type="button" class="primary" id="cc">Copier la liste</button></div>`,root=>{
@@ -703,9 +884,9 @@ function coursesSheet(){const days=weekDays(ui.week),wk=keyOf(days[0]);const cs=
         for(const i of r.cond||[])if(A(i))add(al,i,null,por)}}
       for(const a of S.aliments)if(PINCH(a)&&!inStock('a:'+a.id)&&!al.has(a.id))al.set(a.id,{c:0,p:0,u:new Map()});
       return {al,ready}};
-    const amount=(e,ready)=>ready?(e.p===1?'1 portion':e.p.toLocaleString('fr-FR')+' portions'):e.u.size?[...e.u].map(([u,n])=>fmtQ(n,u)).join(' + '):(e.c>1?'×'+e.c:'');
+    const amount=(e,ready)=>ready?(e.p===1?'1 portion':e.p.toLocaleString(LOC)+' portions'):e.u.size?[...e.u].map(([u,n])=>fmtQ(n,u)).join(' + '):(e.c>1?'×'+e.c:'');
     // quantité ajustable : base théorique + pas du bouton + affichage
-    const meas=(e,ready)=>{const def=amount(e,ready);if(ready)return {def,base:e.p,step:1,fmt:v=>v===1?'1 portion':v.toLocaleString('fr-FR')+' portions'};
+    const meas=(e,ready)=>{const def=amount(e,ready);if(ready)return {def,base:e.p,step:1,fmt:v=>v===1?'1 portion':v.toLocaleString(LOC)+' portions'};
       if(e.u.size){const [[u,n],...o]=[...e.u];const step=u==='g'?50:u==='ml'?100:1,base=step===1?Math.ceil(n-1e-9):n;return {def,base,step,fmt:v=>[fmtQ(v,u),...o.map(([u2,n2])=>fmtQ(n2,u2))].join(' + ')}}
       return {def,base:e.c,step:1,fmt:v=>'×'+v}};
     let lines=[];
@@ -737,7 +918,7 @@ function coursesSheet(){const days=weekDays(ui.week),wk=keyOf(days[0]);const cs=
       const ar=e.target.closest('[data-adjr]');if(ar){e.preventDefault();delete cs.adj[ar.dataset.adjr];save();draw();return}
       const cg=e.target.closest('[data-cg]');if(cg){ui.cg=cg.dataset.cg;draw();return}
       if(e.target.id==='cr'){cs.checked=[];save();draw();return}
-      if(e.target.id==='cc'){const txt=('Courses du '+f(days[0])+' au '+f(days[6])+'\n'+lines.map(l=>!l?'':l[0]==='#'?l.slice(1):'- '+l).join('\n')).trim();
+      if(e.target.id==='cc'){const txt=('Courses du '+f(days[0])+' au '+f(days[6])+'\n'+lines.map(l=>!l?'':l[0]==='#'?l.slice(1):'- '+l).join('\n')).trim().split('\n').map(l=>tr(l)).join('\n');
         const done=m=>{e.target.textContent=m};try{navigator.clipboard.writeText(txt).then(()=>done('Copiée ✓'),()=>done('Copie impossible'))}catch(x){done('Copie impossible')}}}})}
 
 /* ---------- deletes (with undo) ---------- */
@@ -766,7 +947,7 @@ function famMount(root){const box=root.querySelector('#fam');if(!box)return;let 
 
 /* ---------- données : export / import ---------- */
 function menuSheet(){const json=JSON.stringify(S);
-  openSheet(`<h2>Famille et données</h2><h3>Famille</h3><div id="fam"></div><h3>Compte</h3>${ACCOUNT()}<h3>Exporter</h3><p class="muted" style="margin-top:0">Copie toutes tes données pour les sauvegarder ou les mettre dans l’autre version de l’app.</p><button type="button" class="ghost" id="cp">Copier les données</button>
+  openSheet(`<h2>Famille et données</h2><h3>Famille</h3><div id="fam"></div><h3>Langue</h3><div class="seg"><button type="button" class="tog" data-lang="fr" aria-pressed="${LANG==='fr'}">Français</button><button type="button" class="tog" data-lang="en" aria-pressed="${LANG==='en'}">English</button></div><h3>Compte</h3>${ACCOUNT()}<h3>Exporter</h3><p class="muted" style="margin-top:0">Copie toutes tes données pour les sauvegarder ou les mettre dans l’autre version de l’app.</p><button type="button" class="ghost" id="cp">Copier les données</button>
   <h3>Importer</h3><p class="muted" style="margin-top:0">Colle des données copiées depuis l’app. Elles remplacent les données actuelles (tu pourras annuler).</p><textarea id="imp" rows="4" placeholder="Coller ici" aria-label="Données à importer"></textarea><p class="err" id="ie" role="alert"></p>
   <div class="actions"><button type="button" class="ghost" data-close>Fermer</button><button type="button" class="primary" id="ib">Importer</button></div>`,root=>{
     root.querySelector('#cp').onclick=async e=>{try{await navigator.clipboard.writeText(json);e.target.textContent='Copié ✓'}catch(x){const t=root.querySelector('#imp');t.value=json;t.focus();t.select();e.target.textContent='Texte sélectionné ci-dessous : copie-le'}};
@@ -823,15 +1004,15 @@ const V={
 planning:{title:'Planning',sub:()=>'Matin, midi et soir, semaine par semaine',shell:()=>'<div id="list"></div>',list:()=>{
   const now=new Date();now.setHours(0,0,0,0);const ws=new Date(now);ws.setDate(now.getDate()-((now.getDay()+6)%7)+ui.week*7);
   const days=[...Array(7)].map((_,i)=>{const d=new Date(ws);d.setDate(ws.getDate()+i);return d});const tk=keyOf(now);
-  const f=d=>d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
+  const f=d=>d.toLocaleDateString(LOC,{day:'numeric',month:'short'});
   return `<div class="weeknav"><button type="button" data-week="-1" aria-label="Semaine précédente">‹</button><div><strong>Du ${f(days[0])} au ${f(days[6])}</strong>${ui.week?'<button type="button" class="link" data-week="0">Revenir à cette semaine</button>':'<span class="muted">Cette semaine</span>'}</div><button type="button" data-week="1" aria-label="Semaine suivante">›</button></div><div class="weektools"><button type="button" class="primary" data-courses>Liste de courses</button><button type="button" class="ghost" data-wsheet>Modèles et copier / coller</button><button type="button" class="ghost" data-wclear>Vider la semaine</button>${clip?`<button type="button" class="ghost" data-wpaste style="position:relative;padding-right:40px">Coller : ${esc(clipTxt(clip))}, à partir de lundi<span class="clipx" data-wclip role="button" aria-label="Oublier ce qui a été copié" title="Oublier la copie">×</span></button>`:''}</div><div class="filters" style="margin:0 0 10px">${S.members.length>1?S.members.map(x=>`<button type="button" class="fchip" data-pmemf="${esc(x.id)}" aria-pressed="${ui.pmem===x.id}" style="--c:${memCol(x.name)}">${esc(x.name)}</button>`).join(''):''}<button type="button" class="fchip" data-matin aria-pressed="${showMatin()}" style="margin-left:auto">☕ Matins</button></div>`+
-  days.map(d=>{const k=keyOf(d);return `<section class="day${k===tk?' today':''}"><h3>${d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}${k===tk?' <span class="muted">· aujourd’hui</span>':''}<button type="button" class="dayact" data-dayact="${k}" aria-label="Copier, coller ou enregistrer ce jour">⋯</button></h3>${MOMENTS.filter(([m])=>m!=='matin'||showMatin()).map(([m,ml])=>{const pf=x=>!ui.pmem||!M(ui.pmem)||!x.length||x.includes(ui.pmem);const rs=slotEntries(k,m).filter(e=>pf(entryMembers(e))),lo=restesTo(k,m).filter(x=>pf(x.members.filter(M)));
+  days.map(d=>{const k=keyOf(d);return `<section class="day${k===tk?' today':''}"><h3>${d.toLocaleDateString(LOC,{weekday:'long',day:'numeric',month:'long'})}${k===tk?' <span class="muted">· aujourd’hui</span>':''}<button type="button" class="dayact" data-dayact="${k}" aria-label="Copier, coller ou enregistrer ce jour">⋯</button></h3>${MOMENTS.filter(([m])=>m!=='matin'||showMatin()).map(([m,ml])=>{const pf=x=>!ui.pmem||!M(ui.pmem)||!x.length||x.includes(ui.pmem);const rs=slotEntries(k,m).filter(e=>pf(entryMembers(e))),lo=restesTo(k,m).filter(x=>pf(x.members.filter(M)));
     return `<button type="button" class="meal${m==='matin'?' matin':''}" data-day="${k}" data-moment="${m}"><span class="mlabel">${ml}</span>${rs.length||lo.length?`<span class="mlist">${slotItems(rs,lo)}</span>`:`<span class="mbody muted">${m==='matin'?'+':'+ Choisir un repas'}</span>`}</button>`}).join('')}</section>`}).join('')}},
 rapport:{title:'Rapport',sub:()=>'Ce qu’on mange, semaine par semaine',shell:()=>'<div id="list"></div>',list:()=>{
-  const days=weekDays(ui.week),f=d=>d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'}),R0=report(days,ui.rpm&&M(ui.rpm)?ui.rpm:'');
+  const days=weekDays(ui.week),f=d=>d.toLocaleDateString(LOC,{day:'numeric',month:'short'}),R0=report(days,ui.rpm&&M(ui.rpm)?ui.rpm:'');
   const nav=`<div class="weeknav"><button type="button" data-week="-1" aria-label="Semaine précédente">‹</button><div><strong>Du ${f(days[0])} au ${f(days[6])}</strong>${ui.week?'<button type="button" class="link" data-week="0">Revenir à cette semaine</button>':'<span class="muted">Cette semaine</span>'}</div><button type="button" data-week="1" aria-label="Semaine suivante">›</button></div>${S.members.length>1?`<div class="filters" style="margin:0 0 10px">${S.members.map(x=>`<button type="button" class="fchip" data-rpm="${esc(x.id)}" aria-pressed="${ui.rpm===x.id}" style="--c:${memCol(x.name)}">${esc(x.name)}</button>`).join('')}</div>`:''}`;
   if(!R0.meals)return nav+'<p class="empty">Rien de prévu cette semaine'+(ui.rpm?' pour cette personne':'')+'. Remplis le planning, le rapport se fera tout seul.</p>';
-  const who=ui.rpm&&M(ui.rpm)?M(ui.rpm).name:'par personne (moyenne)',nf=x=>(Math.round(x*10)/10).toLocaleString('fr-FR');
+  const who=ui.rpm&&M(ui.rpm)?M(ui.rpm).name:'par personne (moyenne)',nf=x=>(Math.round(x*10)/10).toLocaleString(LOC);
   const nd=R0.has.reduce((a,b)=>a+b,0)||1,fl=R0.fl.reduce((a,b)=>a+b,0)/nd,mx=Math.max(5,...R0.fl);
   const tot=Object.values(R0.byType).reduce((a,b)=>a+b,0)||1;
   const top=[...R0.count].sort((a,b)=>b[1]-a[1]).slice(0,5).map(([id,n])=>{const a=A(id);return a?`<span class="chip">${emo(a)} ${esc(a.name)} <strong>${n}×</strong></span>`:''}).join('');
@@ -848,7 +1029,7 @@ repas:{title:'Repas complets',sub:()=>`${S.repas.length} repas enregistrés · �
   let arr=byName(S.repas).filter(r=>(!q||norm(r.name+' '+summary(r)).includes(q)));
   if((ui.rsort||'use')==='use')arr.sort((a,b)=>(us.get(b.id)?.n||0)-(us.get(a.id)?.n||0));
   const card=r=>{const u=us.get(r.id),ms=r.slots.plat?'plat':r.slots.proteine?'proteine':SLOTS.map(([s])=>s).find(s=>r.slots[s]),mo=refObj(r.slots[ms]),mt=mo?(r.slots[ms].k==='a'?mo.type:(mo.alimentIds.map(A).filter(Boolean)[0]||{}).type):'';
-    return `<li><button type="button" class="card rcard ${mt?'t-'+mt:''}" data-open-repas="${esc(r.id)}"><span class="remo" aria-hidden="true">${repasEmos(r)}</span><strong>${esc(r.name)}${momHtml(r)}${u?` <span class="cat">${u.n}×</span>`:''}</strong><span class="slots">${SLOTS.filter(([s])=>refName(r.slots[s])).map(([s,l])=>`<span class="k">${l}</span><span>${esc(refName(r.slots[s]))}</span>`).join('')}</span>${u?`<span class="muted rlast">${u.last?'Dernière fois : '+esc(agoTxt(u.last,tk)):''}${u.last&&u.next?' · ':''}${u.next?'Prévu '+esc(fromKey(u.next).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric'})):''}</span>`:'<span class="muted rlast">Jamais mis au planning</span>'}</button></li>`};
+    return `<li><button type="button" class="card rcard ${mt?'t-'+mt:''}" data-open-repas="${esc(r.id)}"><span class="remo" aria-hidden="true">${repasEmos(r)}</span><strong>${esc(r.name)}${momHtml(r)}${u?` <span class="cat">${u.n}×</span>`:''}</strong><span class="slots">${SLOTS.filter(([s])=>refName(r.slots[s])).map(([s,l])=>`<span class="k">${l}</span><span>${esc(refName(r.slots[s]))}</span>`).join('')}</span>${u?`<span class="muted rlast">${u.last?'Dernière fois : '+esc(agoTxt(u.last,tk)):''}${u.last&&u.next?' · ':''}${u.next?'Prévu '+esc(fromKey(u.next).toLocaleDateString(LOC,{weekday:'long',day:'numeric'})):''}</span>`:'<span class="muted rlast">Jamais mis au planning</span>'}</button></li>`};
   const old=q?[]:S.repas.filter(r=>{const u=us.get(r.id);return u&&u.last&&!u.next&&daysBetween(u.last,tk)>=21}).sort((a,b)=>us.get(a.id).last.localeCompare(us.get(b.id).last)).slice(0,4);
   return (old.length?`<section class="group"><h2>Pas fait depuis longtemps <span class="muted">${old.length}</span></h2><ul class="list">${old.map(card).join('')}</ul></section><h2>Tous les repas</h2>`:'')+(arr.length?`<ul class="list">${arr.map(card).join('')}</ul>`:'<p class="muted">Aucun repas ne correspond.</p>')}},
 plats:{title:'Plats',sub:()=>`${S.plats.length} plats · ${S.plats.filter(p=>p.fav).length} favoris`,shell:()=>{const used=allCats().filter(c=>S.plats.some(p=>p.cat===c.id));
