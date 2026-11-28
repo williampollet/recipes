@@ -78,7 +78,7 @@ h2{font-size:24px;line-height:1.15;margin:0 0 4px}h3{font-size:17px;margin:20px 
 .amt{font-weight:500;white-space:nowrap}
 .remo{float:right;font-size:20px;letter-spacing:2px;margin-left:8px}.rlast{display:block;font-size:13px;margin-top:8px}
 .rcardx{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 16px;margin-bottom:12px}.rcardx h3{margin:0 0 6px;font-size:16px}.big{font-size:26px;font-weight:600;margin:0 0 8px}.big .muted{font-size:15px;font-weight:400}
-.rdays{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center}.rdays small{display:block;font-size:12px}.rcol{display:flex;align-items:flex-end;height:70px;background:color-mix(in srgb,var(--line) 50%,transparent);border-radius:8px;overflow:hidden}.rcol span{display:block;width:100%;background:var(--legume,#5a9e4b);opacity:.55}.rcol span.ok{opacity:1}
+.rdays{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center}.rdays small{display:block;font-size:12px}.rcol{position:relative;display:flex;align-items:flex-end;height:70px;background:color-mix(in srgb,var(--line) 50%,transparent);border-radius:8px;overflow:hidden}.rcol span{display:block;width:100%;background:var(--bc,var(--legume));opacity:.45}.rthr{position:absolute;left:0;right:0;border-top:2px dashed var(--ink,#1d2a22);opacity:.55;pointer-events:none}.rleg{margin:6px 0 0;font-size:13px}.rcol span.ok{opacity:1}
 .rbar{display:grid;grid-template-columns:92px 1fr auto;gap:8px;align-items:center;margin:6px 0;font-size:14px}.rt{height:10px;border-radius:6px;background:color-mix(in srgb,var(--line) 60%,transparent);overflow:hidden}.rt span{display:block;height:100%;background:var(--c,var(--acc))}.rv{white-space:nowrap}
 .clipx{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:28px;height:28px;line-height:26px;text-align:center;border-radius:50%;font-size:16px;color:var(--mute);background:color-mix(in srgb,var(--mute) 12%,transparent)}
 .condrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 8px}.condrow .sl{color:var(--mute);font-weight:500;margin-right:6px}.condrow .ghost{min-height:36px;padding:0 12px}
@@ -301,6 +301,7 @@ const EN_RX=[
 [/^(.+) croisé avec chaque type de plat\. Touche une idée pour la créer\.$/,(m,a)=>`${a} combined with each dish type. Tap an idea to create it.`],
 [/^Utilisé dans (\d+) repas\.?$/,(m,n)=>`Used in ${Tn(n,'meal','meals')}.`],
 [/^Portions (.+)$/,(m,a)=>`Servings: ${a}`],
+[/^Pointillés : objectif de (\d+) par jour$/,(m,n)=>`Dashed line: target of ${n} per day`],
 [/^objectif (\d+)$/,(m,n)=>`target ${n}`],
 [/^Moyenne sur les (\d+) jours? remplis\.$/,(m,n)=>`Average over the ${Tn(n,'filled day','filled days')}.`],
 [/^Sans poids connu, pas comptés dans les grammes : (.+)\. Ajoute le poids d’une pièce dans leur fiche\.$/,(m,a)=>`No known weight, not counted in grams: ${a}. Add the weight of one piece on their sheet.`],
@@ -967,14 +968,14 @@ const PW=[[/concasse|conserve|boite|bocal|rape|lait|huile/,0],[/petits?[- ]suiss
   [/jack be little/,400],[/potimarron/,1200],[/butternut|courge/,1000],[/chou-fleur|chou fleur/,800],[/brocoli/,400]];
 const pieceW=a=>a&&(a.pw||(PW.find(([r])=>r.test(norm(a.name).replace(/œ/g,'oe')))||[])[1])||0;
 const gramsOf=(a,q)=>{if(!q)return pieceW(a)||0;if(q.u==='g'||q.u==='ml')return q.n;if(q.u==='c. à s.')return q.n*15;return q.n*(pieceW(a)||0)};
-function report(days,only){const R0={fl:[0,0,0,0,0,0,0],has:[0,0,0,0,0,0,0],byType:{},count:new Map(),meals:0,dairyG:0,dairyMiss:new Set(),maison:0,toutfait:0};
+function report(days,only){const R0={fl:[0,0,0,0,0,0,0],lt:[0,0,0,0,0,0,0],has:[0,0,0,0,0,0,0],byType:{},count:new Map(),meals:0,dairyG:0,dairyMiss:new Set(),maison:0,toutfait:0};
   const fam=S.members.length?S.members.map(m=>m.id):[''];const div=only?1:fam.length;const share=id=>!id?1:(M(id)?.kind==='enfant'?0.5:1);
   const eat=(e,eaters,di)=>{const list=(eaters&&eaters.length?eaters:fam).filter(id=>!only||id===only);if(!list.length)return;R0.meals++;R0.has[di]=1;
     for(const [s] of SLOTS){const ref=e.slots[s],o=refObj(ref);if(!o)continue;
       const items=ref.k==='a'?[[o,o.qty]]:o.alimentIds.map(A).filter(Boolean).map(a=>[a,o.qty&&o.qty[a.id]]);
       if(ref.k==='p'){if(o.origin==='toutfait')R0.toutfait+=list.length/div;else R0.maison+=list.length/div}
       for(const [a,q] of items){if(PINCH(a))continue;R0.count.set(a.id,(R0.count.get(a.id)||0)+1);
-        for(const id of list){R0.byType[a.type]=(R0.byType[a.type]||0)+1/div;if(a.type==='fruit'||a.type==='legume')R0.fl[di]+=1/div;
+        for(const id of list){R0.byType[a.type]=(R0.byType[a.type]||0)+1/div;if(a.type==='fruit'||a.type==='legume')R0.fl[di]+=1/div;if(a.type==='laitage')R0.lt[di]+=1/div;
           if(a.type==='laitage'){const g=gramsOf(a,q);if(g)R0.dairyG+=g*share(id)/div;else R0.dairyMiss.add(a.name)}}}}};
   days.forEach((d,di)=>{const k=keyOf(d);for(const [m] of MOMENTS){for(const e of slotEntries(k,m))eat(e,entryMembers(e),di);
     for(const x of restesTo(k,m)){const e=resteEntry(x);if(e)eat(e,x.members.filter(M),di)}}});
@@ -1014,14 +1015,15 @@ rapport:{title:'Rapport',sub:()=>'Ce qu’on mange, semaine par semaine',shell:(
   const nav=`<div class="weeknav"><button type="button" data-week="-1" aria-label="Semaine précédente">‹</button><div><strong>Du ${f(days[0])} au ${f(days[6])}</strong>${ui.week?'<button type="button" class="link" data-week="0">Revenir à cette semaine</button>':'<span class="muted">Cette semaine</span>'}</div><button type="button" data-week="1" aria-label="Semaine suivante">›</button></div>${S.members.length>1?`<div class="filters" style="margin:0 0 10px">${S.members.map(x=>`<button type="button" class="fchip" data-rpm="${esc(x.id)}" aria-pressed="${ui.rpm===x.id}" style="--c:${memCol(x.name)}">${esc(x.name)}</button>`).join('')}</div>`:''}`;
   if(!R0.meals)return nav+'<p class="empty">Rien de prévu cette semaine'+(ui.rpm?' pour cette personne':'')+'. Remplis le planning, le rapport se fera tout seul.</p>';
   const who=ui.rpm&&M(ui.rpm)?M(ui.rpm).name:'par personne (moyenne)',nf=x=>(Math.round(x*10)/10).toLocaleString(LOC);
-  const nd=R0.has.reduce((a,b)=>a+b,0)||1,fl=R0.fl.reduce((a,b)=>a+b,0)/nd,mx=Math.max(5,...R0.fl);
+  const nd=R0.has.reduce((a,b)=>a+b,0)||1,fl=R0.fl.reduce((a,b)=>a+b,0)/nd;const ltT=ui.rpm&&M(ui.rpm)?.kind==='enfant'?3:2;
+  const bars=(arr,T,c)=>{const mx=Math.max(T*1.4,...arr);return `<div class="rdays" style="--bc:${c}">${arr.map((v,i)=>`<div><span class="rcol"><span style="height:${Math.round(v/mx*100)}%" class="${v>=T?'ok':''}"></span><i class="rthr" style="bottom:${Math.round(T/mx*100)}%"></i></span><small>${DAYS[i]}</small><small class="${v>=T?'':'muted'}">${nf(v)}</small></div>`).join('')}</div><p class="muted rleg">Pointillés : objectif de ${T} par jour</p>`};
   const tot=Object.values(R0.byType).reduce((a,b)=>a+b,0)||1;
   const top=[...R0.count].sort((a,b)=>b[1]-a[1]).slice(0,5).map(([id,n])=>{const a=A(id);return a?`<span class="chip">${emo(a)} ${esc(a.name)} <strong>${n}×</strong></span>`:''}).join('');
   const hm=R0.maison+R0.toutfait;
   return nav+`<p class="muted" style="margin:0 0 10px">Portions ${esc(who)} · une portion = un aliment servi à une personne dans un repas.</p>
   <section class="rcardx"><h3>🥦🍎 Fruits et légumes</h3><p class="big">${nf(fl)} <span class="muted">portions par jour · objectif 5</span></p>${nd<7?`<p class="muted" style="margin:0 0 6px;font-size:14px">Moyenne sur les ${nd} jour${nd>1?'s':''} remplis.</p>`:''}
-    <div class="rdays">${R0.fl.map((v,i)=>`<div><span class="rcol"><span style="height:${Math.round(v/mx*100)}%" class="${v>=5?'ok':''}"></span></span><small>${DAYS[i]}</small><small class="muted">${nf(v)}</small></div>`).join('')}</div></section>
-  <section class="rcardx"><h3>🥛 Laitages</h3><p class="big">${nf((R0.byType.laitage||0)/nd)} <span class="muted">portions par jour</span>${R0.dairyG?` · ${Math.round(R0.dairyG/nd)} g <span class="muted">par jour</span>`:''}</p>${R0.dairyMiss.size?`<p class="muted" style="margin:0;font-size:14px">Sans poids connu, pas comptés dans les grammes : ${esc([...R0.dairyMiss].join(', '))}. Ajoute le poids d’une pièce dans leur fiche.</p>`:''}</section>
+    ${bars(R0.fl,5,'var(--legume)')}</section>
+  <section class="rcardx"><h3>🥛 Laitages</h3><p class="big">${nf((R0.byType.laitage||0)/nd)} <span class="muted">portions par jour · objectif ${ltT}</span>${R0.dairyG?` · ${Math.round(R0.dairyG/nd)} g <span class="muted">par jour</span>`:''}</p>${bars(R0.lt,ltT,'var(--laitage)')}${R0.dairyMiss.size?`<p class="muted" style="margin:0;font-size:14px">Sans poids connu, pas comptés dans les grammes : ${esc([...R0.dairyMiss].join(', '))}. Ajoute le poids d’une pièce dans leur fiche.</p>`:''}</section>
   <section class="rcardx"><h3>Variété</h3><p class="big">${R0.count.size} <span class="muted">aliments différents</span></p><div class="chips">${top}</div></section>
   ${hm?`<section class="rcardx"><h3>Maison ou tout fait</h3><p class="big">${Math.round(R0.maison/hm*100)} % <span class="muted">maison</span></p><p class="muted" style="margin:0;font-size:14px">${nf(R0.maison)} plats maison, ${nf(R0.toutfait)} tout faits.</p></section>`:''}`}},
 repas:{title:'Repas complets',sub:()=>`${S.repas.length} repas enregistrés · à placer puis ajuster dans le planning`,shell:()=>`<div class="tools">${search('Chercher un repas')}<div class="filters">${[['use','Les plus utilisés'],['az','A → Z']].map(([k,l])=>`<button type="button" class="fchip" data-rsort="${k}" aria-pressed="${(ui.rsort||'use')===k}">${l}</button>`).join('')}</div></div><div id="list"></div>`,list:()=>{
@@ -1089,7 +1091,7 @@ if(migrate())persist();
 render();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 // nouvelle version en ligne : recharge tout seul au retour dans l'app (si aucune fiche n'est ouverte et tout est envoyé)
-const BUILD='repas-v67';
+const BUILD='repas-v68';
 async function checkUpdate(){if(location.protocol!=='https:')return;try{const t=await (await fetch('sw.js?'+Date.now(),{cache:'no-store'})).text();const v=(t.match(/const C='([^']+)'/)||[])[1];
   if(!v||v===BUILD)return;if(document.body.classList.contains('lock')||(typeof dirty!=='undefined'&&dirty)){setTimeout(checkUpdate,60000);return}location.reload()}catch(_){}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkUpdate()});setInterval(checkUpdate,30*60000);
